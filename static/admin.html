@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mhjc 后台管理</title>
+<style>
+/* ====================== 基础 ====================== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0a0f;
+  --side:rgba(20,20,26,.72);
+  --panel:rgba(30,30,38,.62);
+  --panel-hover:rgba(40,40,50,.72);
+  --border:rgba(255,255,255,.09);
+  --border-strong:rgba(255,255,255,.16);
+  --txt:#fff;
+  --sub:#9a9aa2;
+  --accent:#0a84ff;
+  --green:#30d158;
+  --red:#ff453a;
+  --orange:#ff9f0a;
+  --purple:#bf5af2;
+  --yellow:#ffd60a;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  color:var(--txt);user-select:none}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;outline:none;border:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26)}
+
+/* 全局背景光晕 */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 15% 10%,rgba(10,132,255,.14),transparent 42%),
+    radial-gradient(circle at 88% 85%,rgba(191,90,242,.12),transparent 42%),
+    radial-gradient(circle at 60% 30%,rgba(48,209,88,.06),transparent 40%);
+  animation:auroraShift 22s ease-in-out infinite alternate;
+}
+@keyframes auroraShift{
+  0%{transform:scale(1) translate(0,0)}
+  100%{transform:scale(1.1) translate(-2%,-2%)}
+}
+
+/* ====================== 登录页 ====================== */
+#loginView{
+  position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  transition:opacity .6s var(--ease),transform .6s var(--ease);
+}
+#loginView.hide{opacity:0;transform:scale(1.06);pointer-events:none}
+.login-card{
+  position:relative;width:min(400px,92vw);padding:44px 36px 36px;
+  background:rgba(24,24,30,.78);backdrop-filter:blur(40px) saturate(180%);
+  border:1px solid var(--border);border-radius:26px;
+  box-shadow:0 34px 100px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.09);
+  animation:cardIn .85s var(--ease);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(36px) scale(.94)}to{opacity:1;transform:none}}
+.login-logo{
+  width:82px;height:82px;border-radius:22px;margin:0 auto 20px;
+  display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);
+  box-shadow:0 16px 44px rgba(10,132,255,.44),inset 0 2px 0 rgba(255,255,255,.25);
+  animation:logoFloat 5s ease-in-out infinite;
+}
+@keyframes logoFloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-9px) rotate(2deg)}}
+.login-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.login-sub{text-align:center;font-size:13px;color:var(--sub);margin-top:6px;margin-bottom:28px}
+.field{position:relative;margin-bottom:16px}
+.field input{
+  width:100%;padding:20px 16px 8px;font-size:15px;color:#fff;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;transition:all .3s var(--ease);
+}
+.field input:focus{
+  background:rgba(255,255,255,.1);border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(10,132,255,.16);
+}
+.field label{
+  position:absolute;left:17px;top:15px;font-size:15px;color:var(--sub);
+  pointer-events:none;transition:all .25s var(--ease);
+}
+.field input:focus+label,.field input:not(:placeholder-shown)+label{
+  top:7px;font-size:11px;color:var(--accent);letter-spacing:.03em;
+}
+.btn-main{
+  width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:700;
+  background:linear-gradient(135deg,#0a84ff,#0060df);color:#fff;
+  transition:all .25s var(--ease);position:relative;overflow:hidden;
+}
+.btn-main:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(10,132,255,.44)}
+.btn-main:active{transform:translateY(0) scale(.98)}
+.btn-main:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-main::after{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+  transition:left .7s var(--ease);
+}
+.btn-main:hover::after{left:100%}
+.err{
+  margin-bottom:16px;padding:11px 14px;border-radius:12px;font-size:13px;
+  background:rgba(255,69,58,.14);border:1px solid rgba(255,69,58,.32);color:#ff8b82;
+  display:none;
+}
+.err.show{display:block;animation:shake .45s var(--ease)}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.login-hint{
+  margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);
+  text-align:center;font-size:11.5px;color:rgba(255,255,255,.3);line-height:1.8;
+}
+.login-hint code{
+  background:rgba(255,255,255,.08);padding:2px 7px;border-radius:5px;
+  color:#8ec5ff;font-family:ui-monospace,Menlo,monospace;
+}
+
+/* ====================== 主布局 ====================== */
+#appView{
+  position:relative;z-index:1;width:100%;height:100%;display:none;
+}
+#appView.show{display:flex;animation:appIn .7s var(--ease)}
+@keyframes appIn{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:none}}
+
+/* 侧边栏 */
+#sidebar{
+  width:236px;flex-shrink:0;height:100%;display:flex;flex-direction:column;
+  background:var(--side);backdrop-filter:blur(30px) saturate(180%);
+  border-right:1px solid var(--border);
+  transition:transform .35s var(--ease);
+}
+.side-brand{
+  padding:22px 20px 20px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.brand-logo{
+  width:40px;height:40px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);
+  box-shadow:0 6px 18px rgba(10,132,255,.36);
+}
+.brand-text{min-width:0}
+.brand-name{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.brand-sub{font-size:11px;color:var(--sub);margin-top:2px}
+.side-nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:11px;
+  font-size:13.5px;color:var(--sub);cursor:pointer;margin-bottom:3px;
+  transition:all .22s var(--ease);position:relative;
+}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff;transform:translateX(3px)}
+.nav-item.active{
+  background:rgba(10,132,255,.16);color:#fff;font-weight:600;
+  box-shadow:inset 0 0 0 1px rgba(10,132,255,.3);
+}
+.nav-item.active::before{
+  content:'';position:absolute;left:-10px;top:50%;transform:translateY(-50%);
+  width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);
+}
+.nav-icon{width:20px;text-align:center;font-size:16px;flex-shrink:0}
+.nav-badge{
+  margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:rgba(255,69,58,.9);color:#fff;min-width:18px;text-align:center;
+}
+.nav-badge.hidden{display:none}
+.side-foot{
+  padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);
+  font-size:11px;color:rgba(255,255,255,.3);line-height:1.7;
+}
+.side-user{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+  padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.05);
+}
+.side-avatar{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);
+}
+.side-out{
+  font-size:11.5px;color:#8ec5ff;cursor:pointer;margin-left:auto;
+  transition:color .2s;
+}
+.side-out:hover{color:#fff}
+
+/* 主内容区 */
+#main{
+  flex:1;min-width:0;display:flex;flex-direction:column;height:100%;
+}
+#topBar{
+  height:60px;flex-shrink:0;display:flex;align-items:center;gap:16px;
+  padding:0 24px;border-bottom:1px solid var(--border);
+  background:rgba(20,20,26,.42);backdrop-filter:blur(22px);
+}
+#menuBtn{
+  display:none;font-size:19px;width:36px;height:36px;border-radius:10px;
+  align-items:center;justify-content:center;
+  transition:background .2s;
+}
+#menuBtn:hover{background:rgba(255,255,255,.09)}
+.page-title{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.page-desc{font-size:12px;color:var(--sub);margin-top:1px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:15px;color:var(--sub);
+  transition:all .22s var(--ease);
+}
+.icon-btn:hover{background:rgba(255,255,255,.09);color:#fff;transform:translateY(-1px)}
+.icon-btn:active{transform:scale(.94)}
+#content{
+  flex:1;overflow-y:auto;padding:24px;
+  animation:contentIn .45s var(--ease);
+}
+@keyframes contentIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* ====================== 组件 ====================== */
+.card{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:16px;
+  transition:all .28s var(--ease);
+}
+.card.hoverable{cursor:default}
+.card.hoverable:hover{
+  background:var(--panel-hover);transform:translateY(-2px);
+  box-shadow:0 14px 36px rgba(0,0,0,.36);
+}
+.stats-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;
+  margin-bottom:22px;
+}
+.stat-card{
+  position:relative;padding:20px;border-radius:16px;overflow:hidden;
+  background:var(--panel);border:1px solid var(--border);
+  transition:all .3s var(--ease);
+}
+.stat-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.4);
+  border-color:var(--border-strong)}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--c1),var(--c2));opacity:.9;
+}
+.stat-label{font-size:12px;color:var(--sub);letter-spacing:.03em;font-weight:500}
+.stat-value{
+  font-size:30px;font-weight:800;margin-top:8px;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:#fff;
+}
+.stat-extra{font-size:11.5px;color:var(--sub);margin-top:6px}
+.stat-icon{
+  position:absolute;right:16px;top:16px;font-size:26px;opacity:.16;
+}
+
+.h1{font-size:18px;font-weight:700;margin-bottom:4px;letter-spacing:-.01em}
+.h2{font-size:14px;font-weight:700;margin-bottom:12px;letter-spacing:.01em}
+.muted{color:var(--sub);font-size:12px}
+.section-head{
+  display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;
+}
+.section-head .grow{flex:1;min-width:0}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+.inp{
+  padding:10px 14px;border-radius:11px;font-size:13.5px;color:#fff;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  transition:all .25s var(--ease);width:100%;
+}
+.inp:focus{border-color:var(--accent);background:rgba(255,255,255,.1);
+  box-shadow:0 0 0 3px rgba(10,132,255,.14)}
+.inp.sm{padding:8px 12px;font-size:12.5px;width:auto;min-width:170px}
+textarea.inp{
+  resize:vertical;min-height:100px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.7;
+}
+select.inp{
+  cursor:pointer;min-width:130px;width:auto;
+  background-image:linear-gradient(45deg,transparent 50%,#9a9aa2 50%),
+    linear-gradient(135deg,#9a9aa2 50%,transparent 50%);
+  background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;-webkit-appearance:none;appearance:none;
+  padding-right:34px;
+}
+select.inp option{background:#1c1c22;color:#fff}
+
+.btn{
+  padding:9px 17px;border-radius:10px;font-size:13px;font-weight:600;
+  transition:all .22s var(--ease);white-space:nowrap;display:inline-flex;
+  align-items:center;gap:6px;
+}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.15);transform:translateY(-1px);
+  box-shadow:0 8px 22px rgba(10,132,255,.36)}
+.btn.green{background:var(--green);color:#002a0e}
+.btn.green:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn.red{background:var(--red);color:#fff}
+.btn.red:hover{filter:brightness(1.12);transform:translateY(-1px);
+  box-shadow:0 8px 22px rgba(255,69,58,.34)}
+.btn.gray{background:rgba(255,255,255,.09);color:#fff}
+.btn.gray:hover{background:rgba(255,255,255,.16);transform:translateY(-1px)}
+.btn.ghost{background:transparent;color:var(--sub);border:1px solid var(--border)}
+.btn.ghost:hover{color:#fff;border-color:var(--border-strong);
+  background:rgba(255,255,255,.05)}
+.btn.sm{padding:6px 12px;font-size:12px;border-radius:8px}
+
+.tag{
+  display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;
+  font-weight:600;white-space:nowrap;
+}
+.tag.ok{background:rgba(48,209,88,.16);color:#6ee787}
+.tag.warn{background:rgba(255,159,10,.18);color:#ffc861}
+.tag.err{background:rgba(255,69,58,.18);color:#ff8b82}
+.tag.info{background:rgba(10,132,255,.18);color:#8ec5ff}
+.tag.gray{background:rgba(255,255,255,.09);color:var(--sub)}
+.tag.purple{background:rgba(191,90,242,.18);color:#dba6ff}
+
+.empty{
+  text-align:center;padding:60px 24px;color:var(--sub);font-size:13.5px;
+  line-height:2;
+}
+.empty .big{font-size:52px;display:block;margin-bottom:14px;opacity:.42}
+.spinner{
+  width:22px;height:22px;border:2.5px solid rgba(255,255,255,.15);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .75s linear infinite;display:inline-block;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 数据列表 */
+.data-row{
+  display:flex;gap:14px;align-items:center;padding:14px 16px;
+  border-radius:13px;margin-bottom:9px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);
+  transition:all .24s var(--ease);
+}
+.data-row:hover{
+  background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12);
+  transform:translateX(3px);
+}
+.row-avatar{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);overflow:hidden;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+.row-avatar.round{border-radius:50%;font-size:17px;font-weight:700}
+.row-avatar img{width:100%;height:100%;object-fit:cover}
+.row-main{flex:1;min-width:0}
+.row-title{
+  font-size:14px;font-weight:600;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;
+}
+.row-sub{
+  font-size:11.5px;color:var(--sub);margin-top:3px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;display:flex;gap:12px;flex-wrap:wrap;
+}
+.row-sub span{display:inline-flex;align-items:center;gap:4px}
+.row-actions{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;letter-spacing:-.01em}
+
+/* 分页 */
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px}
+.pager .pg-info{font-size:12.5px;color:var(--sub);min-width:120px;text-align:center}
+
+/* ====================== 模态框 ====================== */
+#modal{
+  position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(10px);padding:20px;
+}
+#modal.show{display:flex;animation:fadeIn .28s var(--ease)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{
+  width:min(600px,94vw);max-height:90vh;overflow-y:auto;padding:28px;
+  background:rgba(28,28,36,.98);border:1px solid var(--border-strong);
+  border-radius:22px;box-shadow:0 34px 100px rgba(0,0,0,.78);
+  animation:modalIn .45s var(--ease);
+}
+.modal-box.wide{width:min(920px,95vw)}
+.modal-box.full{width:min(1180px,96vw)}
+@keyframes modalIn{from{opacity:0;transform:translateY(28px) scale(.96)}to{opacity:1;transform:none}}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.modal-desc{font-size:12.5px;color:var(--sub);margin-bottom:20px;line-height:1.7}
+.fgroup{margin-bottom:16px}
+.fgroup>label{
+  display:block;font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:600;
+  letter-spacing:.02em;
+}
+.fgroup .hint{font-size:11px;color:rgba(255,255,255,.32);margin-top:6px;line-height:1.6}
+.frow{display:flex;gap:12px}
+.frow>*{flex:1;min-width:0}
+.modal-actions{
+  display:flex;gap:10px;justify-content:flex-end;margin-top:24px;
+  padding-top:20px;border-top:1px solid rgba(255,255,255,.08);
+}
+.hidden{display:none!important}
+
+/* ====================== Toast ====================== */
+#toasts{
+  position:fixed;top:20px;right:20px;z-index:9999;
+  display:flex;flex-direction:column;gap:10px;pointer-events:none;
+}
+.toast{
+  padding:13px 18px;border-radius:13px;font-size:13px;max-width:340px;
+  background:rgba(34,34,44,.96);backdrop-filter:blur(24px);
+  border:1px solid var(--border-strong);
+  box-shadow:0 14px 38px rgba(0,0,0,.55);
+  display:flex;gap:10px;align-items:center;
+  animation:toastIn .42s var(--ease);
+  pointer-events:auto;line-height:1.5;
+}
+.toast.out{animation:toastOut .3s var(--ease) forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(80px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateX(80px) scale(.9)}}
+.toast.ok{border-left:3px solid var(--green)}
+.toast.err{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--accent)}
+.toast.warn{border-left:3px solid var(--orange)}
+
+/* ====================== 预览 iframe ====================== */
+.preview-frame{
+  width:100%;height:520px;border:1px solid var(--border-strong);
+  border-radius:14px;background:#fff;display:block;
+}
+
+/* ====================== 响应式 ====================== */
+#overlay{
+  position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);
+  backdrop-filter:blur(4px);display:none;
+}
+#overlay.show{display:block;animation:fadeIn .25s var(--ease)}
+@media (max-width:900px){
+  #sidebar{
+    position:fixed;left:0;top:0;bottom:0;z-index:90;
+    transform:translateX(-100%);
+  }
+  #sidebar.open{transform:translateX(0);box-shadow:20px 0 60px rgba(0,0,0,.6)}
+  #menuBtn{display:flex}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  #content{padding:16px}
+}
+@media (max-width:600px){
+  .stats-grid{grid-template-columns:1fr}
+  .login-card{padding:34px 24px 28px}
+  .frow{flex-direction:column;gap:0}
+  .row-actions{width:100%;justify-content:flex-start}
+  .data-row{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- ====================== 登录页 ====================== -->
+<div id="loginView">
+  <div class="login-card">
+    <div class="login-logo">🔐</div>
+    <div class="login-title">mhjc 后台管理</div>
+    <div class="login-sub">请输入管理员密码以继续</div>
+
+    <div class="err" id="loginErr"></div>
+
+    <div class="field">
+      <input type="password" id="adminPwd" placeholder=" " autocomplete="current-password">
+      <label>管理员密码</label>
+    </div>
+
+    <button class="btn-main" id="loginBtn">登 录</button>
+
+    <div class="login-hint">
+      默认密码为 <code>1</code>，登录后请及时修改<br>
+      后台仅限授权人员访问，请勿泄露密码
+    </div>
+  </div>
+</div>
+
+<!-- ====================== 主应用 ====================== -->
+<div id="appView">
+  <div id="overlay"></div>
+
+  <aside id="sidebar">
+    <div class="side-brand">
+      <div class="brand-logo">M</div>
+      <div class="brand-text">
+        <div class="brand-name">mhjc</div>
+        <div class="brand-sub">后台管理系统</div>
+      </div>
+    </div>
+
+    <nav class="side-nav" id="sideNav">
+      <div class="nav-item active" data-page="overview">
+        <span class="nav-icon">📊</span><span>概览</span>
+      </div>
+      <div class="nav-item" data-page="users">
+        <span class="nav-icon">👥</span><span>用户管理</span>
+      </div>
+      <div class="nav-item" data-page="apps">
+        <span class="nav-icon">📦</span><span>应用审核</span>
+        <span class="nav-badge hidden" id="pendingBadge">0</span>
+      </div>
+      <div class="nav-item" data-page="recharge">
+        <span class="nav-icon">💰</span><span>充值记录</span>
+      </div>
+      <div class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙️</span><span>系统设置</span>
+      </div>
+      <div class="nav-item" data-page="debug">
+        <span class="nav-icon">🐞</span><span>调试工具</span>
+      </div>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-user">
+        <div class="side-avatar">A</div>
+        <div style="min-width:0">
+          <div style="font-size:12px;font-weight:600;color:#fff">管理员</div>
+          <div style="font-size:10.5px">已登录</div>
+        </div>
+        <span class="side-out" id="logoutBtn">退出</span>
+      </div>
+      <div>mhjc admin v1.0.0</div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <header id="topBar">
+      <button id="menuBtn">☰</button>
+      <div>
+        <div class="page-title" id="pageTitle">概览</div>
+        <div class="page-desc" id="pageDesc">系统运行状态一览</div>
+      </div>
+      <div class="top-right">
+        <button class="icon-btn" id="refreshBtn" title="刷新当前页">🔄</button>
+      </div>
+    </header>
+
+    <div id="content"></div>
+  </main>
+</div>
+
+<div id="toasts"></div>
+<div id="modal"><div class="modal-box" id="modalBox"></div></div>
+
+<script>
+/* ==================================================================
+   mhjc 后台管理主程序
+   ================================================================== */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const EASE = 'cubic-bezier(.16,1,.3,1)';
+
+/* -------------------- 状态 -------------------- */
+const S = {
+  token: localStorage.getItem('mhjc_admin_token') || '',
+  page: 'overview',
+  cache: {
+    users: [],
+    usersPage: 1,
+    usersTotal: 0,
+    usersQuery: '',
+    apps: [],
+    appsFilter: 'all',
+    appsQuery: '',
+    recharge: [],
+    rechargePage: 1,
+    rechargeTotal: 0
+  }
+};
+
+/* -------------------- 工具 -------------------- */
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtTime(s){
+  if (!s) return '-';
+  return String(s).replace('T',' ').slice(0,19);
+}
+function fmtMoney(n){
+  return (Number(n) || 0).toFixed(2);
+}
+
+/* -------------------- Toast -------------------- */
+function toast(msg, type = 'info', ms = 2800){
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icons = { ok:'✅', err:'⚠️', info:'ℹ️', warn:'⚡' };
+  el.innerHTML = '<span>' + (icons[type] || '') + '</span><span>' + esc(msg) + '</span>';
+  $('#toasts').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 320);
+  }, ms);
+}
+
+/* -------------------- API -------------------- */
+async function api(path, opts = {}){
+  const headers = Object.assign({ 'Content-Type':'application/json' }, opts.headers || {});
+  if (S.token) headers['Authorization'] = 'Bearer ' + S.token;
+
+  let res;
+  try{
+    res = await fetch('/api/admin' + path, Object.assign({}, opts, { headers }));
+  }catch(e){
+    throw new Error('无法连接服务器，请确认 server.py 已启动');
+  }
+
+  let data = {};
+  try{ data = await res.json(); }catch(e){ data = {}; }
+
+  if (res.status === 401){
+    // 未授权 → 回登录页
+    if (path !== '/login'){
+      S.token = '';
+      localStorage.removeItem('mhjc_admin_token');
+      showLogin();
+    }
+    throw new Error(data.error || '登录已失效，请重新登录');
+  }
+  if (!res.ok) throw new Error(data.error || ('请求失败 (' + res.status + ')'));
+  return data;
+}
+
+/* ==================================================================
+   登录
+   ================================================================== */
+function showLogin(){
+  $('#appView').classList.remove('show');
+  $('#loginView').classList.remove('hide');
+  setTimeout(() => { $('#adminPwd').focus(); }, 200);
+}
+function showApp(){
+  $('#loginView').classList.add('hide');
+  setTimeout(() => {
+    $('#appView').classList.add('show');
+    navigate(S.page);
+    refreshPendingBadge();
+  }, 400);
+}
+
+function loginError(msg){
+  const el = $('#loginErr');
+  el.textContent = msg;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+
+async function doAdminLogin(){
+  const pwd = $('#adminPwd').value;
+  if (!pwd) return loginError('请输入密码');
+  const btn = $('#loginBtn');
+  btn.disabled = true;
+  btn.textContent = '验证中…';
+  try{
+    const d = await api('/login', {
+      method: 'POST',
+      body: JSON.stringify({ password: pwd })
+    });
+    S.token = d.token;
+    localStorage.setItem('mhjc_admin_token', d.token);
+    $('#adminPwd').value = '';
+    $('#loginErr').classList.remove('show');
+    toast('登录成功，欢迎回来', 'ok');
+    showApp();
+  }catch(e){
+    loginError(e.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '登 录';
+  }
+}
+
+async function doAdminLogout(){
+  try{ await api('/logout', { method:'POST' }); }catch(e){}
+  S.token = '';
+  localStorage.removeItem('mhjc_admin_token');
+  toast('已退出登录', 'info');
+  showLogin();
+}
+
+/* ==================================================================
+   导航
+   ================================================================== */
+const PAGES = {
+  overview: { title:'概览',     desc:'系统运行状态一览',       render: renderOverview },
+  users:    { title:'用户管理', desc:'管理所有注册用户',       render: renderUsers },
+  apps:     { title:'应用审核', desc:'审核、编辑、上下架应用', render: renderApps },
+  recharge: { title:'充值记录', desc:'查看所有 MJ 充值记录',   render: renderRecharge },
+  settings: { title:'系统设置', desc:'修改密码、配置系统参数', render: renderSettings },
+  debug:    { title:'调试工具', desc:'开发者专用调试接口',     render: renderDebug }
+};
+
+function navigate(page){
+  if (!PAGES[page]) page = 'overview';
+  S.page = page;
+
+  $$('.nav-item').forEach(x => {
+    x.classList.toggle('active', x.dataset.page === page);
+  });
+
+  const p = PAGES[page];
+  $('#pageTitle').textContent = p.title;
+  $('#pageDesc').textContent = p.desc;
+
+  const content = $('#content');
+  content.style.animation = 'none';
+  void content.offsetWidth;
+  content.style.animation = 'contentIn .45s ' + EASE;
+
+  content.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+
+  try{
+    p.render(content);
+  }catch(e){
+    content.innerHTML = '<div class="empty"><span class="big">😵</span>' +
+      '页面加载失败<br>' + esc(e.message) + '</div>';
+  }
+
+  // 关闭移动端侧栏
+  $('#sidebar').classList.remove('open');
+  $('#overlay').classList.remove('show');
+}
+
+async function refreshPendingBadge(){
+  try{
+    const d = await api('/stats');
+    const n = d.pending_apps || 0;
+    const badge = $('#pendingBadge');
+    if (n > 0){
+      badge.textContent = n > 99 ? '99+' : n;
+      badge.classList.remove('hidden');
+    }else{
+      badge.classList.add('hidden');
+    }
+  }catch(e){ /* 静默 */ }
+}
+
+/* ==================================================================
+   页面 1：概览
+   ================================================================== */
+async function renderOverview(container){
+  const d = await api('/stats');
+
+  const cards = [
+    { label:'注册用户',   value:d.users,        extra:'累计注册账号',   c1:'#0a84ff', c2:'#5ac8fa', icon:'👥' },
+    { label:'上架应用',   value:d.apps,         extra:'已通过审核',     c1:'#30d158', c2:'#a8e6a3', icon:'📦' },
+    { label:'待审核',     value:d.pending_apps, extra:'等待处理',       c1:'#ff9f0a', c2:'#ffd60a', icon:'⏳' },
+    { label:'MJ 总量',    value:fmtMoney(d.total_recharge), extra:'累计充值', c1:'#bf5af2', c2:'#da8fff', icon:'💰' }
+  ];
+
+  container.innerHTML =
+    '<div class="stats-grid">' +
+      cards.map(c =>
+        '<div class="stat-card" style="--c1:' + c.c1 + ';--c2:' + c.c2 + '">' +
+          '<div class="stat-icon">' + c.icon + '</div>' +
+          '<div class="stat-label">' + esc(c.label) + '</div>' +
+          '<div class="stat-value">' + esc(String(c.value)) + '</div>' +
+          '<div class="stat-extra">' + esc(c.extra) + '</div>' +
+        '</div>'
+      ).join('') +
+    '</div>' +
+
+    '<div class="h2">快捷操作</div>' +
+    '<div class="card">' +
+      '<div class="toolbar">' +
+        '<button class="btn primary" data-go="apps">📦 处理待审核应用' +
+          (d.pending_apps > 0
+            ? ' <span class="tag warn" style="padding:1px 7px;font-size:10px">' +
+              d.pending_apps + '</span>'
+            : '') +
+        '</button>' +
+        '<button class="btn gray" data-go="users">👥 查看用户列表</button>' +
+        '<button class="btn gray" data-go="recharge">💰 查看充值记录</button>' +
+        '<button class="btn gray" data-go="settings">⚙️ 系统设置</button>' +
+        '<button class="btn gray" data-go="debug">🐞 调试工具</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:22px">最近注册用户</div>' +
+    '<div id="recentUsers">' +
+      '<div class="empty"><span class="spinner"></span></div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:22px">系统信息</div>' +
+    '<div class="card">' +
+      '<div class="row-sub" style="font-size:12.5px;line-height:2.1;display:block">' +
+        '<div>服务器时间：<span class="mono">' + esc(d.server_time || '-') + '</span></div>' +
+        '<div>数据库大小：<span class="mono">' + esc(d.db_size || '-') + '</span></div>' +
+        '<div>运行时长：<span class="mono">' + esc(d.uptime || '-') + '</span></div>' +
+        '<div>系统版本：<span class="mono">mhjc v1.0.0</span></div>' +
+      '</div>' +
+    '</div>';
+
+  // 快捷跳转
+  container.querySelectorAll('[data-go]').forEach(b => {
+    b.onclick = () => navigate(b.dataset.go);
+  });
+
+  // 最近用户
+  try{
+    const r = await api('/users?page=1&limit=5');
+    const list = r.users || [];
+    const box = container.querySelector('#recentUsers');
+    if (!list.length){
+      box.innerHTML = '<div class="empty"><span class="big">👤</span>暂无注册用户</div>';
+    }else{
+      box.innerHTML = list.map(u => userRowHTML(u, true)).join('');
+    }
+  }catch(e){
+    container.querySelector('#recentUsers').innerHTML =
+      '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+/* ==================================================================
+   页面 2：用户管理
+   ================================================================== */
+function userRowHTML(u, compact){
+  const banned = Number(u.banned) === 1;
+  return '<div class="data-row">' +
+    '<div class="row-avatar round">' +
+      esc((u.nickname || u.username || 'U')[0].toUpperCase()) +
+    '</div>' +
+    '<div class="row-main">' +
+      '<div class="row-title">' +
+        esc(u.nickname || u.username) +
+        (banned ? '<span class="tag err">已封禁</span>' : '<span class="tag ok">正常</span>') +
+      '</div>' +
+      '<div class="row-sub">' +
+        '<span>@' + esc(u.username) + '</span>' +
+        '<span>ID ' + esc(u.id) + '</span>' +
+        '<span style="color:#ffd60a">MJ ' + fmtMoney(u.balance) + '</span>' +
+        (compact ? '' : '<span>注册于 ' + esc(fmtTime(u.created_at)) + '</span>') +
+      '</div>' +
+      (compact ? '' :
+        '<div class="row-sub" style="margin-top:4px">' +
+          '<span class="mono" style="opacity:.6">' + esc(u.device_fingerprint || '-') + '</span>' +
+        '</div>' ) +
+    '</div>' +
+    (compact ? '' :
+      '<div class="row-actions">' +
+        '<button class="btn sm gray" data-act="balance" data-id="' + u.id + '">调整 MJ</button>' +
+        '<button class="btn sm ' + (banned ? 'green' : 'red') + '" data-act="ban" data-id="' + u.id +
+          '" data-banned="' + (banned ? 1 : 0) + '">' + (banned ? '解封' : '封禁') + '</button>' +
+        '<button class="btn sm ghost" data-act="reset-pwd" data-id="' + u.id +
+          '" data-name="' + esc(u.username) + '">重置密码</button>' +
+        '<button class="btn sm ghost" data-act="kick" data-id="' + u.id + '">踢下线</button>' +
+      '</div>'
+    ) +
+  '</div>';
+}
+
+async function renderUsers(container){
+  container.innerHTML =
+    '<div class="section-head">' +
+      '<div class="grow">' +
+        '<input class="inp" id="userSearch" placeholder="🔍 搜索用户名 / 昵称 / 设备ID" style="max-width:380px">' +
+      '</div>' +
+      '<button class="btn gray" id="userRefresh">刷新</button>' +
+    '</div>' +
+    '<div id="userList"><div class="empty"><span class="spinner"></span></div></div>' +
+    '<div id="userPager"></div>';
+
+  const search = container.querySelector('#userSearch');
+  let searchTimer = null;
+  search.value = S.cache.usersQuery;
+  search.oninput = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      S.cache.usersQuery = search.value.trim();
+      S.cache.usersPage = 1;
+      loadUsers(container);
+    }, 320);
+  };
+  container.querySelector('#userRefresh').onclick = () => loadUsers(container);
+
+  await loadUsers(container);
+}
+
+async function loadUsers(container){
+  const listBox = container.querySelector('#userList');
+  const pagerBox = container.querySelector('#userPager');
+  listBox.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+
+  try{
+    const q = encodeURIComponent(S.cache.usersQuery || '');
+    const d = await api('/users?page=' + S.cache.usersPage +
+      '&limit=20&q=' + q);
+    const list = d.users || [];
+    S.cache.users = list;
+    S.cache.usersTotal = d.total || 0;
+
+    if (!list.length){
+      listBox.innerHTML = '<div class="empty"><span class="big">🔍</span>' +
+        (S.cache.usersQuery ? '没有匹配的用户' : '暂无注册用户') + '</div>';
+      pagerBox.innerHTML = '';
+      return;
+    }
+
+    listBox.innerHTML = list.map(u => userRowHTML(u, false)).join('');
+    bindUserActions(container);
+
+    const total = S.cache.usersTotal;
+    const page = S.cache.usersPage;
+    const pages = Math.max(1, Math.ceil(total / 20));
+    pagerBox.innerHTML =
+      '<div class="pager">' +
+        '<button class="btn sm gray" id="uPrev"' + (page <= 1 ? ' disabled' : '') + '>‹ 上一页</button>' +
+        '<div class="pg-info">第 ' + page + ' / ' + pages + ' 页 · 共 ' + total + ' 用户</div>' +
+        '<button class="btn sm gray" id="uNext"' + (page >= pages ? ' disabled' : '') + '>下一页 ›</button>' +
+      '</div>';
+
+    const prev = pagerBox.querySelector('#uPrev');
+    const next = pagerBox.querySelector('#uNext');
+    if (prev) prev.onclick = () => { S.cache.usersPage--; loadUsers(container); };
+    if (next) next.onclick = () => { S.cache.usersPage++; loadUsers(container); };
+
+  }catch(e){
+    listBox.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+function bindUserActions(container){
+  container.querySelectorAll('[data-act]').forEach(b => {
+    b.onclick = async () => {
+      const id = parseInt(b.dataset.id, 10);
+      const act = b.dataset.act;
+      if (act === 'balance') return showBalanceDialog(id, container);
+      if (act === 'reset-pwd') return showResetPwdDialog(id, b.dataset.name, container);
+      if (act === 'ban'){
+        const banned = b.dataset.banned === '1';
+        if (!confirm(banned ? '确定解封该用户？' : '确定封禁该用户？封禁后无法登录。')) return;
+        try{
+          await api('/users/' + id + '/ban', {
+            method:'POST',
+            body: JSON.stringify({ banned: banned ? 0 : 1 })
+          });
+          toast(banned ? '已解封' : '已封禁', 'ok');
+          loadUsers(container);
+        }catch(e){ toast(e.message, 'err'); }
+      }
+      if (act === 'kick'){
+        if (!confirm('确定将该用户踢下线？（下次请求需重新登录）')) return;
+        try{
+          await api('/users/' + id + '/kick', { method:'POST' });
+          toast('已踢下线', 'ok');
+        }catch(e){ toast(e.message, 'err'); }
+      }
+    };
+  });
+}
+
+function showBalanceDialog(uid, container){
+  const u = S.cache.users.find(x => x.id === uid);
+  openModal(
+    '<div class="modal-title">调整 MJ 余额</div>' +
+    '<div class="modal-desc">用户 @' + esc(u ? u.username : uid) +
+      ' 当前余额 <b style="color:#ffd60a">' + fmtMoney(u ? u.balance : 0) + ' MJ</b></div>' +
+
+    '<div class="fgroup">' +
+      '<label>操作类型</label>' +
+      '<select class="inp" id="balMode" style="width:100%">' +
+        '<option value="delta">增减（在当前余额上计算）</option>' +
+        '<option value="set">直接设为指定值</option>' +
+      '</select>' +
+    '</div>' +
+
+    '<div class="fgroup">' +
+      '<label>金额（可为负数）</label>' +
+      '<input class="inp" type="number" id="balAmount" placeholder="例如 100 或 -50" step="0.01">' +
+      '<div class="hint">增减模式下，正数为加 MJ，负数为扣 MJ</div>' +
+    '</div>' +
+
+    '<div class="fgroup">' +
+      '<label>备注</label>' +
+      '<input class="inp" id="balNote" placeholder="可选，会记录到交易日志">' +
+    '</div>' +
+
+    '<div class="modal-actions">' +
+      '<button class="btn gray" id="balCancel">取消</button>' +
+      '<button class="btn primary" id="balOk">确认调整</button>' +
+    '</div>'
+  );
+
+  $('#balCancel').onclick = closeModal;
+  $('#balOk').onclick = async () => {
+    const mode = $('#balMode').value;
+    const amount = Number($('#balAmount').value);
+    const note = $('#balNote').value.trim();
+    if (!amount || isNaN(amount)) return toast('请输入有效金额', 'err');
+    try{
+      await api('/users/' + uid + '/balance', {
+        method:'POST',
+        body: JSON.stringify({ mode, amount, note })
+      });
+      closeModal();
+      toast('余额已调整', 'ok');
+      loadUsers(container);
+    }catch(e){ toast(e.message, 'err'); }
+  };
+}
+
+function showResetPwdDialog(uid, name, container){
+  openModal(
+    '<div class="modal-title">重置用户密码</div>' +
+    '<div class="modal-desc">为用户 <b>@' + esc(name) + '</b> 设置新密码。' +
+      '重置后该用户需要重新登录。</div>' +
+    '<div class="fgroup">' +
+      '<label>新密码</label>' +
+      '<input class="inp" type="password" id="rpNew" placeholder="至少 1 位">' +
+    '</div>' +
+    '<div class="fgroup">' +
+      '<label>确认新密码</label>' +
+      '<input class="inp" type="password" id="rpNew2" placeholder="再次输入">' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn gray" id="rpCancel">取消</button>' +
+      '<button class="btn primary" id="rpOk">确认重置</button>' +
+    '</div>'
+  );
+  $('#rpCancel').onclick = closeModal;
+  $('#rpOk').onclick = async () => {
+    const p1 = $('#rpNew').value;
+    const p2 = $('#rpNew2').value;
+    if (!p1) return toast('密码不能为空', 'err');
+    if (p1 !== p2) return toast('两次输入不一致', 'err');
+    try{
+      await api('/users/' + uid + '/password', {
+        method:'POST',
+        body: JSON.stringify({ password: p1 })
+      });
+      closeModal();
+      toast('密码已重置', 'ok');
+      if (container) loadUsers(container);
+    }catch(e){ toast(e.message, 'err'); }
+  };
+}
+
+/* ==================================================================
+   页面 3：应用审核
+   ================================================================== */
+async function renderApps(container){
+  container.innerHTML =
+    '<div class="section-head">' +
+      '<div class="toolbar grow">' +
+        '<select class="inp" id="appFilter">' +
+          '<option value="all">全部状态</option>' +
+          '<option value="pending">待审核</option>' +
+          '<option value="published">已上架</option>' +
+          '<option value="rejected">已拒绝</option>' +
+        '</select>' +
+        '<input class="inp sm" id="appSearch" placeholder="🔍 搜索应用名 / 开发者" style="min-width:240px">' +
+      '</div>' +
+      '<button class="btn gray" id="appRefresh">刷新</button>' +
+    '</div>' +
+    '<div id="appList"><div class="empty"><span class="spinner"></span></div></div>';
+
+  const filter = container.querySelector('#appFilter');
+  const search = container.querySelector('#appSearch');
+  filter.value = S.cache.appsFilter;
+  search.value = S.cache.appsQuery;
+
+  filter.onchange = () => {
+    S.cache.appsFilter = filter.value;
+    loadApps(container);
+  };
+  let t = null;
+  search.oninput = () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      S.cache.appsQuery = search.value.trim();
+      loadApps(container);
+    }, 320);
+  };
+  container.querySelector('#appRefresh').onclick = () => loadApps(container);
+
+  await loadApps(container);
+}
+
+async function loadApps(container){
+  const listBox = container.querySelector('#appList');
+  listBox.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+
+  try{
+    const q = encodeURIComponent(S.cache.appsQuery || '');
+    const d = await api('/apps?status=' + S.cache.appsFilter + '&q=' + q);
+    const list = d.apps || [];
+    S.cache.apps = list;
+
+    if (!list.length){
+      listBox.innerHTML = '<div class="empty"><span class="big">📦</span>' +
+        (S.cache.appsQuery ? '没有匹配的应用' : '暂无应用') + '</div>';
+      refreshPendingBadge();
+      return;
+    }
+
+    listBox.innerHTML = list.map(a => appRowHTML(a)).join('');
+    bindAppActions(container);
+    refreshPendingBadge();
+
+  }catch(e){
+    listBox.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+function appRowHTML(a){
+  const st = a.status || 'pending';
+  const stTag = st === 'published'
+    ? '<span class="tag ok">已上架</span>'
+    : st === 'rejected'
+      ? '<span class="tag err">已拒绝</span>'
+      : '<span class="tag warn">待审核</span>';
+
+  const iconHTML = (() => {
+    const ic = a.icon || '📦';
+    if (ic.startsWith('data:') || ic.startsWith('http') || ic.startsWith('/'))
+      return '<img src="' + esc(ic) + '" alt="">';
+    return esc(ic);
+  })();
+
+  return '<div class="data-row">' +
+    '<div class="row-avatar">' + iconHTML + '</div>' +
+    '<div class="row-main">' +
+      '<div class="row-title">' +
+        esc(a.name) + stTag +
+        (a.has_backend ? '<span class="tag purple">Python 后端</span>' : '') +
+      '</div>' +
+      '<div class="row-sub">' +
+        '<span>v' + esc(a.version || '1.0.0') + '</span>' +
+        '<span>开发者 @' + esc(a.developer_name || '匿名') + '</span>' +
+        '<span>' + esc(a.category || '未分类') + '</span>' +
+        '<span>' + (a.downloads || 0) + ' 次下载</span>' +
+        '<span>' + esc(fmtTime(a.created_at)) + '</span>' +
+      '</div>' +
+      '<div class="row-sub" style="margin-top:4px">' +
+        '<span style="color:var(--sub)">' +
+          esc((a.description || '暂无描述').slice(0, 90)) +
+        '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="row-actions">' +
+      '<button class="btn sm gray" data-act="preview" data-id="' + a.id + '">预览</button>' +
+      '<button class="btn sm gray" data-act="edit" data-id="' + a.id + '">编辑</button>' +
+      (st !== 'published'
+        ? '<button class="btn sm green" data-act="approve" data-id="' + a.id + '">通过</button>'
+        : '<button class="btn sm warn" data-act="reject" data-id="' + a.id + '">下架</button>') +
+      (st !== 'rejected'
+        ? '<button class="btn sm red" data-act="reject" data-id="' + a.id + '">拒绝</button>'
+        : '') +
+      '<button class="btn sm ghost" data-act="delete" data-id="' + a.id + '">删除</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function bindAppActions(container){
+  container.querySelectorAll('[data-act]').forEach(b => {
+    b.onclick = async () => {
+      const id = parseInt(b.dataset.id, 10);
+      const act = b.dataset.act;
+      const app = S.cache.apps.find(x => x.id === id);
+
+      if (act === 'preview')   return showAppPreview(app);
+      if (act === 'edit')      return showAppEditDialog(app, container);
+
+      if (act === 'approve'){
+        try{
+          await api('/apps/' + id + '/approve', { method:'POST' });
+          toast('已通过审核', 'ok');
+          loadApps(container);
+        }catch(e){ toast(e.message, 'err'); }
+      }
+      if (act === 'reject'){
+        const reason = prompt('请输入拒绝 / 下架原因（可选）', '不符合规范');
+        if (reason === null) return;
+        try{
+          await api('/apps/' + id + '/reject', {
+            method:'POST',
+            body: JSON.stringify({ reason })
+          });
+          toast('已拒绝', 'ok');
+          loadApps(container);
+        }catch(e){ toast(e.message, 'err'); }
+      }
+      if (act === 'delete'){
+        if (!confirm('确定永久删除应用「' + (app ? app.name : id) +
+          '」？此操作不可恢复，所有已安装用户将失去该应用。')) return;
+        try{
+          await api('/apps/' + id, { method:'DELETE' });
+          toast('已删除', 'ok');
+          loadApps(container);
+        }catch(e){ toast(e.message, 'err'); }
+      }
+    };
+  });
+}
+
+function showAppPreview(app){
+  if (!app) return;
+  const hasBackend = Number(app.has_backend) === 1;
+  openModal(
+    '<div class="modal-title">应用预览 · ' + esc(app.name) + '</div>' +
+    '<div class="modal-desc">' +
+      '版本 v' + esc(app.version || '1.0.0') +
+      ' · 开发者 @' + esc(app.developer_name || '匿名') +
+      (hasBackend ? ' · 含 Python 后端' : '') +
+    '</div>' +
+    '<iframe class="preview-frame" id="previewFrame" ' +
+      'sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>' +
+    '<div class="modal-actions">' +
+      '<button class="btn gray" id="pvClose">关闭</button>' +
+      '<button class="btn primary" id="pvOpen">在新标签页打开</button>' +
+    '</div>',
+    true
+  );
+
+  const frame = $('#previewFrame');
+  frame.srcdoc = app.html || '<h1 style="padding:40px;font-family:sans-serif">' +
+    '此应用没有可预览的 HTML</h1>';
+
+  $('#pvClose').onclick = closeModal;
+  $('#pvOpen').onclick = () => {
+    const w = window.open('', '_blank');
+    if (w){
+      w.document.write(app.html || '<h1>无内容</h1>');
+      w.document.close();
+    }else{
+      toast('浏览器拦截了弹窗，请允许后重试', 'warn');
+    }
+  };
+}
+
+function showAppEditDialog(app, container){
+  if (!app) return;
+  openModal(
+    '<div class="modal-title">编辑应用</div>' +
+    '<div class="modal-desc">修改后点击保存，应用状态会重新变为「待审核」</div>' +
+
+    '<div class="frow">' +
+      '<div class="fgroup">' +
+        '<label>应用名称</label>' +
+        '<input class="inp" id="edName" value="' + esc(app.name) + '">' +
+      '</div>' +
+      '<div class="fgroup">' +
+        '<label>版本号</label>' +
+        '<input class="inp" id="edVer" value="' + esc(app.version || '1.0.0') + '">' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="frow">' +
+      '<div class="fgroup">' +
+        '<label>图标（Emoji / URL / DataURL）</label>' +
+        '<input class="inp" id="edIcon" value="' + esc(app.icon || '') + '">' +
+      '</div>' +
+      '<div class="fgroup">' +
+        '<label>分类</label>' +
+        '<input class="inp" id="edCat" value="' + esc(app.category || '') + '">' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="fgroup">' +
+      '<label>应用描述</label>' +
+      '<textarea class="inp" id="edDesc" style="min-height:70px">' +
+        esc(app.description || '') + '</textarea>' +
+    '</div>' +
+
+    '<div class="fgroup">' +
+      '<label>HTML 代码</label>' +
+      '<textarea class="inp" id="edHtml" style="min-height:220px">' +
+        esc(app.html || '') + '</textarea>' +
+    '</div>' +
+
+    (Number(app.has_backend) === 1
+      ? '<div class="fgroup">' +
+          '<label>Python 后端代码</label>' +
+          '<textarea class="inp" id="edBackend" style="min-height:160px">' +
+            esc(app.backend_code || '') + '</textarea>' +
+        '</div>'
+      : '' ) +
+
+    '<div class="modal-actions">' +
+      '<button class="btn gray" id="edCancel">取消</button>' +
+      '<button class="btn primary" id="edSave">保存修改</button>' +
+    '</div>',
+    true
+  );
+
+  $('#edCancel').onclick = closeModal;
+  $('#edSave').onclick = async () => {
+    const payload = {
+      name: $('#edName').value.trim(),
+      version: $('#edVer').value.trim(),
+      icon: $('#edIcon').value.trim(),
+      category: $('#edCat').value.trim(),
+      description: $('#edDesc').value.trim(),
+      html: $('#edHtml').value
+    };
+    const be = $('#edBackend');
+    if (be) payload.backend_code = be.value;
+
+    if (!payload.name) return toast('应用名称不能为空', 'err');
+    if (!payload.html) return toast('HTML 代码不能为空', 'err');
+
+    const btn = $('#edSave');
+    btn.disabled = true;
+    btn.textContent = '保存中…';
+    try{
+      await api('/apps/' + app.id, {
+        method:'PUT',
+        body: JSON.stringify(payload)
+      });
+      closeModal();
+      toast('已保存，应用回到待审核状态', 'ok');
+      loadApps(container);
+    }catch(e){
+      toast(e.message, 'err');
+      btn.disabled = false;
+      btn.textContent = '保存修改';
+    }
+  };
+}
+
+/* ==================================================================
+   页面 4：充值记录
+   ================================================================== */
+async function renderRecharge(container){
+  container.innerHTML =
+    '<div class="section-head">' +
+      '<div class="grow"></div>' +
+      '<button class="btn gray" id="recRefresh">刷新</button>' +
+    '</div>' +
+    '<div id="recList"><div class="empty"><span class="spinner"></span></div></div>' +
+    '<div id="recPager"></div>';
+
+  container.querySelector('#recRefresh').onclick = () => loadRecharge(container);
+  await loadRecharge(container);
+}
+
+async function loadRecharge(container){
+  const listBox = container.querySelector('#recList');
+  const pagerBox = container.querySelector('#recPager');
+  listBox.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+
+  try{
+    const d = await api('/recharge-logs?page=' + S.cache.rechargePage + '&limit=25');
+    const list = d.logs || [];
+    S.cache.rechargeTotal = d.total || 0;
+
+    if (!list.length){
+      listBox.innerHTML = '<div class="empty"><span class="big">💰</span>暂无充值记录</div>';
+      pagerBox.innerHTML = '';
+      return;
+    }
+
+    listBox.innerHTML = list.map(l => {
+      const color = l.amount >= 0 ? '#6ee787' : '#ff8b82';
+      const sign = l.amount >= 0 ? '+' : '';
+      return '<div class="data-row">' +
+        '<div class="row-avatar round" style="background:linear-gradient(135deg,#ff9f0a,#ffd60a);color:#3a2600">💰</div>' +
+        '<div class="row-main">' +
+          '<div class="row-title">' +
+            esc(l.nickname || l.username || ('用户 ' + l.user_id)) +
+            '<span class="tag ' + (l.type === 'recharge' ? 'ok' : 'info') + '">' +
+              esc(l.type === 'recharge' ? '充值' : l.type === 'transfer' ? '转账' : l.type || '其他') +
+            '</span>' +
+          '</div>' +
+          '<div class="row-sub">' +
+            '<span>@' + esc(l.username || '-') + '</span>' +
+            '<span>' + esc(fmtTime(l.created_at)) + '</span>' +
+            (l.note ? '<span>' + esc(l.note) + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="font-weight:800;font-size:16px;color:' + color + '">' +
+          sign + fmtMoney(l.amount) +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    const total = S.cache.rechargeTotal;
+    const page = S.cache.rechargePage;
+    const pages = Math.max(1, Math.ceil(total / 25));
+    pagerBox.innerHTML =
+      '<div class="pager">' +
+        '<button class="btn sm gray" id="rPrev"' + (page <= 1 ? ' disabled' : '') + '>‹ 上一页</button>' +
+        '<div class="pg-info">第 ' + page + ' / ' + pages + ' 页 · 共 ' + total + ' 条</div>' +
+        '<button class="btn sm gray" id="rNext"' + (page >= pages ? ' disabled' : '') + '>下一页 ›</button>' +
+      '</div>';
+
+    const prev = pagerBox.querySelector('#rPrev');
+    const next = pagerBox.querySelector('#rNext');
+    if (prev) prev.onclick = () => { S.cache.rechargePage--; loadRecharge(container); };
+    if (next) next.onclick = () => { S.cache.rechargePage++; loadRecharge(container); };
+
+  }catch(e){
+    listBox.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+/* ==================================================================
+   页面 5：系统设置
+   ================================================================== */
+async function renderSettings(container){
+  container.innerHTML =
+    '<div class="h2">修改管理员密码</div>' +
+    '<div class="card" style="max-width:520px">' +
+      '<div class="fgroup">' +
+        '<label>当前密码</label>' +
+        '<input class="inp" type="password" id="setOld" placeholder="请输入当前密码">' +
+      '</div>' +
+      '<div class="fgroup">' +
+        '<label>新密码</label>' +
+        '<input class="inp" type="password" id="setNew" placeholder="请输入新密码">' +
+        '<div class="hint">建议使用 6 位以上的复杂密码</div>' +
+      '</div>' +
+      '<div class="fgroup">' +
+        '<label>确认新密码</label>' +
+        '<input class="inp" type="password" id="setNew2" placeholder="再次输入新密码">' +
+      '</div>' +
+      '<button class="btn primary" id="setPwdBtn">保存新密码</button>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:26px">系统参数</div>' +
+    '<div class="card">' +
+      '<div class="frow" style="align-items:flex-end">' +
+        '<div class="fgroup">' +
+          '<label>默认壁纸</label>' +
+          '<select class="inp" id="sysWallpaper" style="width:100%">' +
+            '<option value="default">深空</option>' +
+            '<option value="aurora">极光</option>' +
+            '<option value="sunset">日落</option>' +
+            '<option value="purple">紫夜</option>' +
+            '<option value="ocean">深海</option>' +
+            '<option value="forest">森林</option>' +
+            '<option value="candy">糖果</option>' +
+            '<option value="mono">纯黑</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="fgroup">' +
+          '<label>注册赠送 MJ</label>' +
+          '<input class="inp" type="number" id="sysWelcome" placeholder="0" step="0.01">' +
+        '</div>' +
+        '<button class="btn primary" id="sysSave" style="margin-bottom:16px">保存参数</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:26px">AI 提示词模板</div>' +
+    '<div class="card">' +
+      '<div class="fgroup">' +
+        '<label>开发者投稿时生成的提示词模板</label>' +
+        '<textarea class="inp" id="sysPrompt" style="min-height:220px" placeholder="请在此编辑提示词模板…">加载中…</textarea>' +
+        '<div class="hint">' +
+          '可用变量：<code>{{app_name}}</code>（应用名）、' +
+          '<code>{{user_idea}}</code>（用户需求描述）、' +
+          '<code>{{app_id}}</code>（应用 ID）' +
+        '</div>' +
+      '</div>' +
+      '<div class="toolbar">' +
+        '<button class="btn primary" id="promptSave">保存模板</button>' +
+        '<button class="btn gray" id="promptReset">恢复默认</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:26px">危险操作</div>' +
+    '<div class="card" style="border-color:rgba(255,69,58,.3)">' +
+      '<div class="modal-desc" style="margin-bottom:14px">' +
+        '以下操作不可恢复，请谨慎使用。执行前请确保已备份数据。' +
+      '</div>' +
+      '<div class="toolbar">' +
+        '<button class="btn red" id="dangerClearRecharge">清空充值记录</button>' +
+        '<button class="btn red" id="dangerClearRejected">清空已拒绝应用</button>' +
+      '</div>' +
+    '</div>';
+
+  // 加载系统配置
+  try{
+    const cfg = await api('/settings');
+    container.querySelector('#sysWallpaper').value = cfg.wallpaper || 'default';
+    container.querySelector('#sysWelcome').value = cfg.welcome_mj != null ? cfg.welcome_mj : 0;
+    container.querySelector('#sysPrompt').value = cfg.prompt_template || '';
+    container.__defaultPrompt = cfg.default_prompt_template || '';
+  }catch(e){
+    container.querySelector('#sysPrompt').value = '';
+  }
+
+  // 修改密码
+  container.querySelector('#setPwdBtn').onclick = async () => {
+    const o = container.querySelector('#setOld').value;
+    const n = container.querySelector('#setNew').value;
+    const n2 = container.querySelector('#setNew2').value;
+    if (!o || !n) return toast('请填写完整', 'err');
+    if (n !== n2) return toast('两次输入不一致', 'err');
+    try{
+      await api('/password', {
+        method:'POST',
+        body: JSON.stringify({ old:o, new:n })
+      });
+      container.querySelector('#setOld').value = '';
+      container.querySelector('#setNew').value = '';
+      container.querySelector('#setNew2').value = '';
+      toast('密码已修改，请重新登录', 'ok');
+      setTimeout(() => {
+        S.token = '';
+        localStorage.removeItem('mhjc_admin_token');
+        showLogin();
+      }, 1400);
+    }catch(e){ toast(e.message, 'err'); }
+  };
+
+  // 保存系统参数
+  container.querySelector('#sysSave').onclick = async () => {
+    const payload = {
+      wallpaper: container.querySelector('#sysWallpaper').value,
+      welcome_mj: Number(container.querySelector('#sysWelcome').value) || 0
+    };
+    try{
+      await api('/settings', { method:'POST', body: JSON.stringify(payload) });
+      toast('系统参数已保存', 'ok');
+    }catch(e){ toast(e.message, 'err'); }
+  };
+
+  // 保存提示词
+  container.querySelector('#promptSave').onclick = async () => {
+    const tpl = container.querySelector('#sysPrompt').value;
+    try{
+      await api('/settings', {
+        method:'POST',
+        body: JSON.stringify({ prompt_template: tpl })
+      });
+      toast('提示词模板已保存', 'ok');
+    }catch(e){ toast(e.message, 'err'); }
+  };
+
+  // 恢复默认提示词
+  container.querySelector('#promptReset').onclick = () => {
+    if (!container.__defaultPrompt) return toast('默认模板不可用', 'err');
+    if (!confirm('确定恢复为默认提示词模板？')) return;
+    container.querySelector('#sysPrompt').value = container.__defaultPrompt;
+    toast('已恢复默认（记得点击保存）', 'info');
+  };
+
+  // 危险操作
+  container.querySelector('#dangerClearRecharge').onclick = async () => {
+    if (!confirm('确定清空所有充值记录？此操作不可恢复！')) return;
+    if (prompt('请输入 CLEAR 确认操作') !== 'CLEAR') return toast('已取消', 'info');
+    try{
+      await api('/recharge-logs', { method:'DELETE' });
+      toast('充值记录已清空', 'ok');
+    }catch(e){ toast(e.message, 'err'); }
+  };
+  container.querySelector('#dangerClearRejected').onclick = async () => {
+    if (!confirm('确定删除所有已拒绝的应用？此操作不可恢复！')) return;
+    try{
+      await api('/apps?status=rejected', { method:'DELETE' });
+      toast('已清理', 'ok');
+    }catch(e){ toast(e.message, 'err'); }
+  };
+}
+
+/* ==================================================================
+   页面 6：调试工具
+   ================================================================== */
+function renderDebug(container){
+  container.innerHTML =
+    '<div class="card">' +
+      '<div class="h2">接口调试</div>' +
+      '<div class="modal-desc">' +
+        '点击下方按钮直接调用后台调试接口，输出结果展示在下方。' +
+        '所有接口需要已登录的管理员 Token。' +
+      '</div>' +
+      '<div class="toolbar" style="margin-top:12px">' +
+        '<button class="btn gray" data-dbg="stats">📊 系统统计</button>' +
+        '<button class="btn gray" data-dbg="users">👥 用户列表</button>' +
+        '<button class="btn gray" data-dbg="apps">📦 应用列表</button>' +
+        '<button class="btn gray" data-dbg="recharge">💰 充值日志</button>' +
+        '<button class="btn gray" data-dbg="db">🗄️ 数据库信息</button>' +
+        '<button class="btn gray" data-dbg="env">🌐 运行环境</button>' +
+        '<button class="btn gray" data-dbg="ping">📡 Ping 测试</button>' +
+        '<button class="btn gray" data-dbg="clear">🧹 清空输出</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:20px">手动请求</div>' +
+    '<div class="card">' +
+      '<div class="frow" style="align-items:flex-end">' +
+        '<div class="fgroup" style="flex:0 0 130px">' +
+          '<label>方法</label>' +
+          '<select class="inp" id="dbgMethod" style="width:100%">' +
+            '<option>GET</option><option>POST</option>' +
+            '<option>PUT</option><option>DELETE</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="fgroup" style="flex:1">' +
+          '<label>路径（相对于 /api/admin）</label>' +
+          '<input class="inp" id="dbgPath" placeholder="/stats">' +
+        '</div>' +
+        '<button class="btn primary" id="dbgSend" style="margin-bottom:16px">发送</button>' +
+      '</div>' +
+      '<div class="fgroup">' +
+        '<label>请求体（JSON，可选）</label>' +
+        '<textarea class="inp" id="dbgBody" style="min-height:80px" placeholder="{}"></textarea>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:20px">输出</div>' +
+    '<pre id="dbgOut" class="card mono" style="min-height:240px;max-height:520px;' +
+      'overflow:auto;white-space:pre-wrap;word-break:break-all;line-height:1.75;' +
+      'color:#9be89b;font-size:12px;margin:0 0 16px">点击上方按钮或发送请求查看输出…</pre>';
+
+  const out = container.querySelector('#dbgOut');
+  const show = o => {
+    const str = typeof o === 'string' ? o : JSON.stringify(o, null, 2);
+    out.textContent = str;
+    out.style.animation = 'none';
+    void out.offsetWidth;
+    out.style.animation = 'contentIn .3s ' + EASE;
+  };
+
+  container.querySelectorAll('[data-dbg]').forEach(b => {
+    b.onclick = async () => {
+      const k = b.dataset.dbg;
+      if (k === 'clear'){ out.textContent = '输出已清空'; return; }
+      if (k === 'ping'){
+        const t = performance.now();
+        try{
+          await api('/stats');
+          show('Pong! 往返耗时 ' + (performance.now() - t).toFixed(1) + ' ms');
+        }catch(e){ show('❌ ' + e.message); }
+        return;
+      }
+      const map = {
+        stats:    '/stats',
+        users:    '/users?page=1&limit=10',
+        apps:     '/apps?status=all',
+        recharge: '/recharge-logs?page=1&limit=10',
+        db:       '/debug/database',
+        env:      '/debug/environment'
+      };
+      if (!map[k]) return;
+      try{ show(await api(map[k])); }
+      catch(e){ show('❌ ' + e.message); }
+    };
+  });
+
+  container.querySelector('#dbgSend').onclick = async () => {
+    const method = container.querySelector('#dbgMethod').value;
+    const path = container.querySelector('#dbgPath').value.trim();
+    const bodyStr = container.querySelector('#dbgBody').value.trim();
+    if (!path) return toast('请输入路径', 'err');
+
+    let body;
+    if (bodyStr){
+      try{ body = JSON.parse(bodyStr); }
+      catch(e){ return toast('请求体不是合法 JSON', 'err'); }
+    }
+
+    const opts = { method };
+    if (body && method !== 'GET') opts.body = JSON.stringify(body);
+
+    try{
+      const d = await api(path, opts);
+      show(d);
+      toast('请求成功', 'ok');
+    }catch(e){
+      show('❌ ' + e.message);
+      toast(e.message, 'err');
+    }
+  };
+}
+
+/* ==================================================================
+   模态框
+   ================================================================== */
+function openModal(html, size){
+  const box = $('#modalBox');
+  box.className = 'modal-box' +
+    (size === 'wide' ? ' wide' : size === 'full' ? ' full' : '');
+  box.innerHTML = html;
+  $('#modal').classList.add('show');
+}
+function closeModal(){
+  const m = $('#modal');
+  m.style.opacity = '0';
+  setTimeout(() => {
+    m.classList.remove('show');
+    m.style.opacity = '';
+    $('#modalBox').innerHTML = '';
+  }, 220);
+}
+$('#modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+/* ==================================================================
+   事件绑定
+   ================================================================== */
+function bindEvents(){
+  /* 登录 */
+  $('#loginBtn').onclick = doAdminLogin;
+  $('#adminPwd').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doAdminLogin();
+  });
+
+  /* 侧边栏导航 */
+  $$('.nav-item').forEach(item => {
+    item.onclick = () => navigate(item.dataset.page);
+  });
+
+  /* 退出 */
+  $('#logoutBtn').onclick = () => {
+    if (confirm('确定退出登录？')) doAdminLogout();
+  };
+
+  /* 刷新当前页 */
+  $('#refreshBtn').onclick = () => {
+    $('#refreshBtn').style.transform = 'rotate(360deg)';
+    setTimeout(() => { $('#refreshBtn').style.transform = ''; }, 420);
+    navigate(S.page);
+  };
+
+  /* 移动端侧栏 */
+  $('#menuBtn').onclick = () => {
+    $('#sidebar').classList.add('open');
+    $('#overlay').classList.add('show');
+  };
+  $('#overlay').onclick = () => {
+    $('#sidebar').classList.remove('open');
+    $('#overlay').classList.remove('show');
+  };
+
+  /* 键盘快捷键 */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape'){
+      const m = $('#modal');
+      if (m.classList.contains('show')) closeModal();
+    }
+    // Ctrl/Cmd + 数字 快速切换页面
+    if ((e.ctrlKey || e.metaKey) && /^[1-6]$/.test(e.key)){
+      const pages = ['overview','users','apps','recharge','settings','debug'];
+      const p = pages[parseInt(e.key, 10) - 1];
+      if (p && $('#appView').classList.contains('show')){
+        e.preventDefault();
+        navigate(p);
+      }
+    }
+  });
+}
+
+/* ==================================================================
+   启动
+   ================================================================== */
+document.addEventListener('DOMContentLoaded', async () => {
+  bindEvents();
+
+  // 若已有 token，直接尝试进入
+  if (S.token){
+    try{
+      await api('/stats');   // 校验 token 有效性
+      showApp();
+      return;
+    }catch(e){
+      S.token = '';
+      localStorage.removeItem('mhjc_admin_token');
+    }
+  }
+  showLogin();
+});
+</script>
+</body>
+</html>
