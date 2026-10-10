@@ -1,0 +1,2342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>mhjc</title>
+<style>
+/* ============ 全局 ============ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --glass:rgba(28,28,34,.72);
+  --glass2:rgba(40,40,48,.82);
+  --border:rgba(255,255,255,.13);
+  --txt:#fff;
+  --sub:#9a9aa2;
+  --accent:#0a84ff;
+  --green:#30d158;
+  --red:#ff453a;
+  --orange:#ff9f0a;
+  --purple:#bf5af2;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  color:var(--txt);user-select:none}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;background:none;color:inherit}
+input,textarea{font-family:inherit;outline:none;border:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
+
+/* ============ 启动动画 ============ */
+#boot{
+  position:fixed;inset:0;z-index:9999;background:#000;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:opacity .7s var(--ease),transform .7s var(--ease),filter .7s var(--ease);
+}
+#boot.hide{opacity:0;transform:scale(1.12);filter:blur(14px);pointer-events:none}
+#bootCanvas{position:absolute;inset:0;width:100%;height:100%}
+#bootLogo{
+  position:relative;z-index:2;display:flex;gap:.06em;
+  font-size:clamp(56px,12vw,140px);font-weight:800;letter-spacing:-.03em;
+  text-shadow:0 0 60px rgba(120,180,255,.55);
+}
+#bootLogo .ch{
+  display:inline-block;opacity:0;transform:translate3d(var(--sx,0),var(--sy,0),0) rotate(var(--sr,0deg)) scale(.2);
+  filter:blur(8px);
+  transition:transform 1.15s var(--ease),opacity .9s var(--ease),filter .9s var(--ease);
+  background:linear-gradient(135deg,#fff 0%,#8ec5ff 45%,#c78bff 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+#bootLogo.in .ch{opacity:1;transform:translate3d(0,0,0) rotate(0) scale(1);filter:blur(0)}
+#bootRing{
+  position:absolute;z-index:1;width:clamp(220px,42vw,420px);height:clamp(220px,42vw,420px);
+  border-radius:50%;opacity:0;transition:opacity .8s var(--ease);
+  background:conic-gradient(from 0deg,transparent 0deg,rgba(120,180,255,.9) 90deg,
+    transparent 180deg,rgba(199,139,255,.9) 270deg,transparent 360deg);
+  -webkit-mask:radial-gradient(circle,transparent 62%,#000 63%,#000 68%,transparent 69%);
+  mask:radial-gradient(circle,transparent 62%,#000 63%,#000 68%,transparent 69%);
+  animation:spin 2.4s linear infinite;
+}
+#bootRing.in{opacity:1}
+@keyframes spin{to{transform:rotate(360deg)}}
+#bootBar{
+  position:absolute;bottom:16%;width:min(280px,52vw);height:3px;border-radius:3px;
+  background:rgba(255,255,255,.12);overflow:hidden;opacity:0;transition:opacity .5s .3s var(--ease);
+}
+#bootBar.in{opacity:1}
+#bootBarFill{height:100%;width:0;border-radius:3px;
+  background:linear-gradient(90deg,#0a84ff,#bf5af2);transition:width .35s var(--ease)}
+#bootSkip{
+  position:absolute;right:28px;bottom:24px;font-size:13px;color:rgba(255,255,255,.5);
+  padding:8px 16px;border-radius:20px;background:rgba(255,255,255,.07);
+  backdrop-filter:blur(10px);transition:all .25s var(--ease);z-index:3;
+}
+#bootSkip:hover{color:#fff;background:rgba(255,255,255,.15);transform:translateY(-2px)}
+#bootVer{position:absolute;left:28px;bottom:26px;font-size:12px;color:rgba(255,255,255,.3);z-index:3}
+
+/* ============ 登录/注册 ============ */
+#auth{
+  position:fixed;inset:0;z-index:900;display:none;
+  align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 30% 20%,#1a2b4d 0%,#0a0a12 55%,#000 100%);
+}
+#auth.show{display:flex;animation:authIn .8s var(--ease)}
+@keyframes authIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
+#auth::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 75% 70%,rgba(191,90,242,.22),transparent 45%),
+    radial-gradient(circle at 20% 80%,rgba(10,132,255,.2),transparent 45%);
+  animation:auroraMove 16s ease-in-out infinite alternate;
+}
+@keyframes auroraMove{0%{transform:translate(0,0) scale(1)}100%{transform:translate(3%,-3%) scale(1.14)}}
+.auth-card{
+  position:relative;z-index:2;width:min(400px,90vw);padding:40px 34px 34px;
+  background:rgba(24,24,30,.72);backdrop-filter:blur(36px) saturate(180%);
+  border:1px solid var(--border);border-radius:26px;
+  box-shadow:0 30px 90px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);
+  animation:cardIn .9s var(--ease);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(34px) scale(.94)}to{opacity:1;transform:none}}
+.auth-avatar{
+  width:74px;height:74px;border-radius:50%;margin:0 auto 18px;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);
+  display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;
+  box-shadow:0 12px 34px rgba(10,132,255,.4);
+  animation:avatarFloat 4s ease-in-out infinite;
+}
+@keyframes avatarFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.auth-title{text-align:center;font-size:22px;font-weight:700;margin-bottom:6px}
+.auth-sub{text-align:center;font-size:13px;color:var(--sub);margin-bottom:26px;line-height:1.5}
+.field{position:relative;margin-bottom:16px}
+.field input{
+  width:100%;padding:20px 16px 8px;font-size:15px;color:#fff;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;transition:all .3s var(--ease);
+}
+.field input:focus{
+  background:rgba(255,255,255,.1);border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(10,132,255,.16);
+}
+.field label{
+  position:absolute;left:17px;top:15px;font-size:15px;color:var(--sub);
+  pointer-events:none;transition:all .25s var(--ease);
+}
+.field input:focus+label,.field input:not(:placeholder-shown)+label{
+  top:7px;font-size:11px;color:var(--accent);letter-spacing:.03em;
+}
+.btn{
+  width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:600;
+  background:linear-gradient(135deg,#0a84ff,#0060df);color:#fff;
+  transition:all .25s var(--ease);position:relative;overflow:hidden;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(10,132,255,.42)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn::after{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+  transition:left .6s var(--ease);
+}
+.btn:hover::after{left:100%}
+.btn.ghost{background:rgba(255,255,255,.08);color:#fff}
+.btn.ghost:hover{background:rgba(255,255,255,.14);box-shadow:none}
+.auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--sub)}
+.auth-switch a{color:var(--accent);cursor:pointer;font-weight:600;margin-left:4px}
+.auth-err{
+  margin-bottom:14px;padding:11px 14px;border-radius:12px;font-size:13px;
+  background:rgba(255,69,58,.14);border:1px solid rgba(255,69,58,.32);color:#ff8b82;
+  display:none;animation:shake .45s var(--ease);
+}
+.auth-err.show{display:block}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.auth-hint{text-align:center;font-size:11px;color:rgba(255,255,255,.28);margin-top:18px;line-height:1.7}
+
+/* ============ 桌面 ============ */
+#desktop{position:fixed;inset:0;display:none;opacity:0;transition:opacity .6s var(--ease)}
+#desktop.show{display:block;opacity:1}
+#wallpaper{
+  position:absolute;inset:0;z-index:0;overflow:hidden;
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  background-size:cover;background-position:center;transition:opacity .6s var(--ease);
+}
+#wallpaper video{width:100%;height:100%;object-fit:cover;display:block}
+#wallpaper::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.16) 0%,transparent 22%,transparent 76%,rgba(0,0,0,.24) 100%);
+}
+#menuBar{
+  position:absolute;top:0;left:0;right:0;height:30px;z-index:500;
+  display:flex;align-items:center;padding:0 14px;gap:16px;font-size:13px;
+  background:rgba(18,18,22,.42);backdrop-filter:blur(22px) saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.mb-item{display:flex;align-items:center;gap:6px;padding:3px 9px;border-radius:6px;
+  transition:background .2s var(--ease);cursor:default}
+.mb-item:hover{background:rgba(255,255,255,.12)}
+.mb-logo{font-weight:800;letter-spacing:-.02em}
+.mb-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.mb-clock{font-variant-numeric:tabular-nums;font-weight:500}
+#deskIcons{
+  position:absolute;top:46px;left:14px;z-index:10;
+  display:flex;flex-direction:column;gap:6px;flex-wrap:wrap;max-height:calc(100% - 140px);
+}
+.desk-icon{
+  width:88px;padding:10px 6px;border-radius:12px;text-align:center;
+  transition:all .25s var(--ease);cursor:pointer;
+}
+.desk-icon:hover{background:rgba(255,255,255,.13);transform:scale(1.06)}
+.desk-icon:active{transform:scale(.96)}
+.desk-icon .di-img{
+  width:52px;height:52px;margin:0 auto 6px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  background:rgba(255,255,255,.1);box-shadow:0 6px 18px rgba(0,0,0,.34);
+  overflow:hidden;
+}
+.desk-icon .di-img img{width:100%;height:100%;object-fit:cover}
+.desk-icon .di-name{font-size:11px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.85);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
+
+/* Dock */
+#dock{
+  position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:400;
+  display:flex;align-items:flex-end;gap:8px;padding:9px 12px;
+  background:rgba(30,30,38,.52);backdrop-filter:blur(28px) saturate(180%);
+  border:1px solid rgba(255,255,255,.12);border-radius:22px;
+  box-shadow:0 16px 46px rgba(0,0,0,.5);
+  transition:transform .35s var(--ease);
+}
+.dock-item{
+  position:relative;width:54px;height:54px;border-radius:15px;
+  display:flex;align-items:center;justify-content:center;font-size:27px;
+  background:rgba(255,255,255,.09);cursor:pointer;
+  transition:transform .3s var(--ease),background .2s;
+  overflow:visible;
+}
+.dock-item:hover{transform:translateY(-13px) scale(1.18);background:rgba(255,255,255,.16)}
+.dock-item:active{transform:translateY(-6px) scale(1.04)}
+.dock-item img{width:100%;height:100%;object-fit:cover;border-radius:15px}
+.dock-item .tip{
+  position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%) scale(.85);
+  padding:5px 11px;border-radius:9px;font-size:12px;white-space:nowrap;
+  background:rgba(30,30,38,.94);border:1px solid rgba(255,255,255,.14);
+  opacity:0;pointer-events:none;transition:all .2s var(--ease);
+}
+.dock-item:hover .tip{opacity:1;transform:translateX(-50%) scale(1)}
+.dock-running::after{
+  content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.75);
+}
+.dock-sep{width:1px;height:44px;background:rgba(255,255,255,.16);margin:0 3px;align-self:center}
+
+/* ============ 窗口 ============ */
+.window{
+  position:absolute;min-width:340px;min-height:240px;z-index:100;
+  background:var(--glass);backdrop-filter:blur(34px) saturate(180%);
+  border:1px solid var(--border);border-radius:14px;overflow:hidden;
+  box-shadow:0 26px 80px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.07);
+  display:flex;flex-direction:column;
+  animation:winIn .38s var(--ease);
+}
+@keyframes winIn{from{opacity:0;transform:scale(.9) translateY(22px)}to{opacity:1;transform:none}}
+.window.closing{animation:winOut .24s var(--ease) forwards}
+@keyframes winOut{to{opacity:0;transform:scale(.92) translateY(14px)}}
+.window.minimized{display:none}
+.win-bar{
+  height:38px;flex-shrink:0;display:flex;align-items:center;padding:0 12px;gap:9px;
+  background:rgba(255,255,255,.045);border-bottom:1px solid rgba(255,255,255,.08);
+  cursor:default;
+}
+.traffic{display:flex;gap:8px}
+.tl{width:12px;height:12px;border-radius:50%;position:relative;
+  transition:filter .2s;display:flex;align-items:center;justify-content:center}
+.tl.close{background:#ff5f57}.tl.min{background:#febc2e}.tl.max{background:#28c840}
+.tl span{font-size:8px;color:rgba(0,0,0,.55);opacity:0;font-weight:900;line-height:1;
+  transition:opacity .15s}
+.traffic:hover .tl span{opacity:1}
+.win-title{flex:1;text-align:center;font-size:13px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:52px}
+.win-body{flex:1;overflow:auto;position:relative}
+.win-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;z-index:5}
+
+/* ============ 通用 UI ============ */
+.pane{padding:20px;height:100%;overflow:auto}
+.card{
+  background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);
+  border-radius:14px;padding:16px;margin-bottom:12px;
+  transition:all .25s var(--ease);
+}
+.card.hoverable:hover{background:rgba(255,255,255,.1);transform:translateY(-2px);
+  box-shadow:0 10px 26px rgba(0,0,0,.3)}
+.row{display:flex;align-items:center;gap:12px}
+.row.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.muted{color:var(--sub);font-size:12px}
+.h1{font-size:19px;font-weight:700;margin-bottom:4px}
+.h2{font-size:15px;font-weight:600;margin-bottom:8px}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;
+  background:rgba(255,255,255,.1);color:var(--sub)}
+.tag.ok{background:rgba(48,209,88,.18);color:#6ee787}
+.tag.warn{background:rgba(255,159,10,.18);color:#ffc861}
+.tag.err{background:rgba(255,69,58,.18);color:#ff8b82}
+.inp{
+  width:100%;padding:11px 14px;border-radius:11px;font-size:14px;color:#fff;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);
+  transition:all .25s var(--ease);
+}
+.inp:focus{border-color:var(--accent);background:rgba(255,255,255,.11);
+  box-shadow:0 0 0 3px rgba(10,132,255,.16)}
+textarea.inp{resize:vertical;min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.btn-s{
+  padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  background:var(--accent);color:#fff;transition:all .22s var(--ease);
+}
+.btn-s:hover{filter:brightness(1.14);transform:translateY(-1px)}
+.btn-s:active{transform:scale(.96)}
+.btn-s.gray{background:rgba(255,255,255,.12)}
+.btn-s.gray:hover{background:rgba(255,255,255,.2)}
+.btn-s.red{background:var(--red)}
+.btn-s.green{background:var(--green);color:#00220a}
+.empty{text-align:center;padding:52px 20px;color:var(--sub);font-size:13px;line-height:1.9}
+.empty .big{font-size:44px;display:block;margin-bottom:14px;opacity:.5}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.22);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+  display:inline-block;vertical-align:middle}
+
+/* 设置 */
+.set-nav{display:flex;gap:6px;padding:14px 20px 0;border-bottom:1px solid rgba(255,255,255,.08);
+  overflow-x:auto;flex-shrink:0}
+.set-tab{padding:9px 15px;border-radius:10px 10px 0 0;font-size:13px;color:var(--sub);
+  transition:all .22s var(--ease);white-space:nowrap}
+.set-tab:hover{color:#fff;background:rgba(255,255,255,.06)}
+.set-tab.active{color:#fff;background:rgba(255,255,255,.1);font-weight:600}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.wp-item{aspect-ratio:16/10;border-radius:12px;overflow:hidden;cursor:pointer;
+  border:2px solid transparent;transition:all .28s var(--ease);position:relative;
+  background-size:cover;background-position:center}
+.wp-item:hover{transform:scale(1.05);box-shadow:0 10px 26px rgba(0,0,0,.42)}
+.wp-item.active{border-color:var(--accent);box-shadow:0 0 0 4px rgba(10,132,255,.24)}
+.wp-item .wp-label{position:absolute;bottom:0;left:0;right:0;padding:14px 8px 6px;
+  font-size:11px;background:linear-gradient(transparent,rgba(0,0,0,.78))}
+
+/* AppStore */
+.store-head{padding:18px 20px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.app-item{display:flex;gap:14px;align-items:center}
+.app-icon{
+  width:62px;height:62px;border-radius:15px;flex-shrink:0;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:29px;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);
+  box-shadow:0 6px 18px rgba(0,0,0,.36);
+}
+.app-icon img{width:100%;height:100%;object-fit:cover}
+.ai-badge{font-size:10px;padding:2px 7px;border-radius:6px;
+  background:rgba(191,90,242,.22);color:#dba6ff;font-weight:600}
+
+/* 支付宝 */
+.wallet{
+  background:linear-gradient(135deg,#1677ff,#0d5bdb);border-radius:18px;
+  padding:22px;color:#fff;box-shadow:0 14px 40px rgba(22,119,255,.36);margin-bottom:16px;
+}
+.wallet .amt{font-size:38px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px;
+  font-variant-numeric:tabular-nums}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.quick button{
+  padding:11px;border-radius:12px;font-size:13px;font-weight:600;
+  background:rgba(255,255,255,.17);color:#fff;transition:all .22s var(--ease);
+}
+.quick button:hover{background:rgba(255,255,255,.28);transform:translateY(-2px)}
+
+/* QQ */
+.qq-wrap{display:flex;height:100%}
+.qq-side{width:190px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.08);
+  overflow-y:auto;background:rgba(0,0,0,.14)}
+.qq-contact{padding:11px 14px;display:flex;gap:10px;align-items:center;cursor:pointer;
+  transition:background .2s var(--ease)}
+.qq-contact:hover{background:rgba(255,255,255,.08)}
+.qq-contact.active{background:rgba(10,132,255,.24)}
+.qq-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,#0a84ff,#bf5af2);
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700}
+.qq-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.qq-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:70%;padding:9px 13px;border-radius:15px;font-size:13.5px;
+  line-height:1.55;word-break:break-word;animation:msgIn .3s var(--ease)}
+@keyframes msgIn{from{opacity:0;transform:translateY(9px) scale(.96)}to{opacity:1;transform:none}}
+.msg.me{align-self:flex-end;background:linear-gradient(135deg,#0a84ff,#0060df);border-bottom-right-radius:5px}
+.msg.other{align-self:flex-start;background:rgba(255,255,255,.11);border-bottom-left-radius:5px}
+.msg .t{font-size:10px;opacity:.55;margin-top:4px;text-align:right}
+.qq-input{border-top:1px solid rgba(255,255,255,.08);padding:11px;display:flex;gap:9px}
+
+/* Toast */
+#toasts{position:fixed;top:42px;right:18px;z-index:9998;display:flex;flex-direction:column;gap:9px}
+.toast{
+  padding:12px 18px;border-radius:13px;font-size:13px;max-width:320px;
+  background:rgba(30,30,38,.94);backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 34px rgba(0,0,0,.5);
+  animation:toastIn .4s var(--ease);display:flex;gap:9px;align-items:center;
+}
+.toast.out{animation:toastOut .3s var(--ease) forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(70px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateX(70px) scale(.9)}}
+.toast.ok{border-left:3px solid var(--green)}
+.toast.err{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--accent)}
+
+/* 模态 */
+#modal{
+  position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(9px);padding:20px;
+}
+#modal.show{display:flex;animation:authIn .3s var(--ease)}
+.modal-box{
+  width:min(560px,94vw);max-height:88vh;overflow-y:auto;padding:26px;
+  background:rgba(30,30,38,.97);border:1px solid var(--border);
+  border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.72);
+  animation:cardIn .42s var(--ease);
+}
+.modal-box.wide{width:min(820px,95vw)}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:18px}
+.fgroup{margin-bottom:14px}
+.fgroup label{display:block;font-size:12px;color:var(--sub);margin-bottom:7px;font-weight:600}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ============ 启动动画 ============ -->
+<div id="boot">
+  <canvas id="bootCanvas"></canvas>
+  <div id="bootRing"></div>
+  <div id="bootLogo"></div>
+  <div id="bootBar"><div id="bootBarFill"></div></div>
+  <div id="bootVer">mhjc v1.0.0</div>
+  <button id="bootSkip">跳过 ›</button>
+</div>
+
+<!-- ============ 登录 / 注册 ============ -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-avatar">M</div>
+    <div class="auth-title" id="authTitle">身份资料确认</div>
+    <div class="auth-sub" id="authSub">请登录 mhjc 账号以继续</div>
+    <div class="auth-err" id="authErr"></div>
+
+    <div id="loginForm">
+      <div class="field">
+        <input type="text" id="lgUser" placeholder=" " autocomplete="off">
+        <label>用户名</label>
+      </div>
+      <div class="field">
+        <input type="password" id="lgPass" placeholder=" ">
+        <label>密码</label>
+      </div>
+      <button class="btn" id="btnLogin">登 录</button>
+      <div class="auth-switch">
+        还没有账号？<a id="toRegister">立即注册</a>
+      </div>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <div class="field">
+        <input type="text" id="rgUser" placeholder=" " autocomplete="off">
+        <label>用户名</label>
+      </div>
+      <div class="field">
+        <input type="text" id="rgNick" placeholder=" " autocomplete="off">
+        <label>昵称（可选）</label>
+      </div>
+      <div class="field">
+        <input type="password" id="rgPass" placeholder=" ">
+        <label>密码</label>
+      </div>
+      <div class="field">
+        <input type="password" id="rgPass2" placeholder=" ">
+        <label>确认密码</label>
+      </div>
+      <button class="btn" id="btnRegister">注册并进入</button>
+      <div class="auth-switch">
+        已有账号？<a id="toLogin">返回登录</a>
+      </div>
+    </div>
+
+    <div class="auth-hint">
+      一个设备仅可注册一个账号<br>
+      注册即代表同意 mhjc 用户协议
+    </div>
+  </div>
+</div>
+
+<!-- ============ 桌面 ============ -->
+<div id="desktop">
+  <div id="wallpaper"></div>
+
+  <div id="menuBar">
+    <div class="mb-item mb-logo" id="mbLogo">mhjc</div>
+    <div class="mb-item" id="mbActive">Finder</div>
+    <div class="mb-right">
+      <div class="mb-item" id="mbBalance" title="MJ 余额">MJ 0.00</div>
+      <div class="mb-item" id="mbUser">未登录</div>
+      <div class="mb-item mb-clock" id="mbClock">--:--</div>
+    </div>
+  </div>
+
+  <div id="deskIcons"></div>
+  <div id="dock"></div>
+</div>
+
+<div id="toasts"></div>
+<div id="modal"><div class="modal-box" id="modalBox"></div></div>
+
+<script>
+/* ==================================================================
+   mhjc 前端主程序
+   ================================================================== */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const EASE = 'cubic-bezier(.16,1,.3,1)';
+
+/* ---------------- 全局状态 ---------------- */
+const State = {
+  token: localStorage.getItem('mhjc_token') || '',
+  user: null,
+  apps: [],          // 商店已上架应用
+  installed: [],     // 已安装应用 {app_id, version, ...}
+  windows: {},       // id -> {el, app, minimized}
+  zIndex: 100,
+  settings: {},
+  apiBase: ''        // 同源，留空
+};
+
+/* ---------------- 设备指纹 ---------------- */
+function deviceFingerprint(){
+  let id = localStorage.getItem('mhjc_device_id');
+  if (id) return id;
+  let canvasData = '';
+  try{
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 50;
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(0,0,120,24);
+    ctx.fillStyle = '#069';
+    ctx.fillText('mhjc-device-fp', 2, 15);
+    canvasData = c.toDataURL();
+  }catch(e){ canvasData = 'no-canvas'; }
+
+  const raw = [
+    navigator.userAgent,
+    navigator.language,
+    (navigator.languages||[]).join(','),
+    screen.width + 'x' + screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || 0,
+    navigator.deviceMemory || 0,
+    navigator.platform || '',
+    canvasData
+  ].join('|');
+
+  let h = 0x811c9dc5;
+  for (let i = 0; i < raw.length; i++){
+    h ^= raw.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  id = 'dev_' + h.toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  localStorage.setItem('mhjc_device_id', id);
+  return id;
+}
+const DEVICE_ID = deviceFingerprint();
+
+/* ---------------- API 封装 ---------------- */
+async function api(path, opts = {}){
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  if (State.token) headers['Authorization'] = 'Bearer ' + State.token;
+  let res;
+  try{
+    res = await fetch(State.apiBase + '/api' + path, Object.assign({}, opts, { headers }));
+  }catch(e){
+    throw new Error('无法连接服务器，请确认 server.py 已启动');
+  }
+  let data = {};
+  try{ data = await res.json(); }catch(e){ data = {}; }
+  if (!res.ok) throw new Error(data.error || ('请求失败 (' + res.status + ')'));
+  return data;
+}
+
+/* ---------------- Toast ---------------- */
+function toast(msg, type = 'info', ms = 2600){
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icons = { ok:'✅', err:'⚠️', info:'ℹ️' };
+  el.innerHTML = '<span>' + (icons[type] || '') + '</span><span>' + esc(msg) + '</span>';
+  $('#toasts').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 320);
+  }, ms);
+}
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* ==================================================================
+   一、启动动画
+   ================================================================== */
+function runBoot(onDone){
+  const boot = $('#boot'), logo = $('#bootLogo'), ring = $('#bootRing');
+  const bar = $('#bootBar'), barFill = $('#bootBarFill');
+  const canvas = $('#bootCanvas'), ctx = canvas.getContext('2d');
+  let W, H;
+  const resize = () => { W = canvas.width = innerWidth; H = canvas.height = innerHeight; };
+  resize();
+  addEventListener('resize', resize);
+
+  /* --- 文字拆解 --- */
+  const text = 'mhjc';
+  logo.innerHTML = '';
+  [...text].forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.className = 'ch';
+    s.textContent = ch;
+    s.style.setProperty('--sx', (Math.random() - .5) * 900 + 'px');
+    s.style.setProperty('--sy', (Math.random() - .5) * 700 + 'px');
+    s.style.setProperty('--sr', (Math.random() - .5) * 900 + 'deg');
+    s.style.transitionDelay = (0.55 + i * 0.11) + 's';
+    logo.appendChild(s);
+  });
+
+  /* --- 粒子系统 --- */
+  const N = Math.min(220, Math.floor((innerWidth * innerHeight) / 9000));
+  const parts = [];
+  for (let i = 0; i < N; i++){
+    const ang = Math.random() * Math.PI * 2;
+    const rad = Math.random() * Math.min(W, H) * 0.42;
+    parts.push({
+      x: W / 2, y: H / 2,
+      ox: W / 2 + Math.cos(ang) * rad,
+      oy: H / 2 + Math.sin(ang) * rad,
+      tx: W / 2, ty: H / 2,
+      size: Math.random() * 2.6 + 0.7,
+      hue: 195 + Math.random() * 110,
+      spd: 0.016 + Math.random() * 0.03,
+      ph: Math.random() * Math.PI * 2
+    });
+  }
+
+  let t0 = performance.now();
+  let raf, stopped = false;
+  let phase = 'gather';   // gather -> burst -> converge
+
+  function frame(now){
+    if (stopped) return;
+    const el = (now - t0) / 1000;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+
+    if (el < 1.1)       phase = 'gather';
+    else if (el < 3.0)  phase = 'burst';
+    else                phase = 'converge';
+
+    for (const p of parts){
+      let tx = p.tx, ty = p.ty;
+      if (phase === 'gather'){ tx = W / 2; ty = H / 2; }
+      else if (phase === 'burst'){ tx = p.ox; ty = p.oy; }
+      else {
+        const k = 0.055;
+        tx = W / 2 + (p.ox - W / 2) * Math.max(0, 1 - (el - 3.0) / 1.5) * 0.32;
+        ty = H / 2 + (p.oy - H / 2) * Math.max(0, 1 - (el - 3.0) / 1.5) * 0.32;
+        p.x += (tx - p.x) * k;
+        p.y += (ty - p.y) * k;
+        drawParticle(p);
+        continue;
+      }
+      p.x += (tx - p.x) * p.spd;
+      p.y += (ty - p.y) * p.spd;
+      p.x += Math.cos(p.ph + el * 1.6) * 0.35;
+      p.y += Math.sin(p.ph + el * 1.6) * 0.35;
+      drawParticle(p);
+    }
+
+    function drawParticle(p){
+      const dx = p.x - W / 2, dy = p.y - H / 2;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      const alpha = Math.max(0.05, 1 - d / (Math.min(W, H) * 0.62)) * 0.85;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + p.hue + ',92%,66%,' + alpha + ')';
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = 'hsla(' + p.hue + ',95%,62%,.85)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+
+    /* 进度条 */
+    const total = 5.6;
+    const prog = Math.min(1, el / total);
+    barFill.style.width = (prog * 100) + '%';
+
+    /* 时间轴触发 */
+    if (el > 0.45 && !logo.classList.contains('in')) logo.classList.add('in');
+    if (el > 0.9 && !ring.classList.contains('in')) ring.classList.add('in');
+    if (el > 1.0 && !bar.classList.contains('in')) bar.classList.add('in');
+
+    if (el >= total){ finish(); return; }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function finish(){
+    if (stopped) return;
+    stopped = true;
+    cancelAnimationFrame(raf);
+    boot.classList.add('hide');
+    setTimeout(() => { boot.style.display = 'none'; onDone && onDone(); }, 700);
+  }
+
+  $('#bootSkip').onclick = finish;
+  raf = requestAnimationFrame(frame);
+  setTimeout(() => { /* 安全兜底 */ if (!stopped) finish(); }, 8000);
+}
+
+/* ==================================================================
+   二、登录 / 注册
+   ================================================================== */
+function showAuthError(msg){
+  const el = $('#authErr');
+  el.textContent = msg;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+
+function initAuth(){
+  $('#auth').classList.add('show');
+
+  $('#toRegister').onclick = () => {
+    $('#loginForm').classList.add('hidden');
+    $('#registerForm').classList.remove('hidden');
+    $('#authTitle').textContent = '创建 mhjc 账号';
+    $('#authSub').textContent = '本设备尚未绑定账号，注册后即可使用';
+    $('#authErr').classList.remove('show');
+  };
+  $('#toLogin').onclick = () => {
+    $('#registerForm').classList.add('hidden');
+    $('#loginForm').classList.remove('hidden');
+    $('#authTitle').textContent = '身份资料确认';
+    $('#authSub').textContent = '请登录 mhjc 账号以继续';
+    $('#authErr').classList.remove('show');
+  };
+
+  $('#btnLogin').onclick = doLogin;
+  $('#btnRegister').onclick = doRegister;
+  $('#lgPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('#rgPass2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+
+  // 已登录则跳过
+  if (State.token){
+    api('/me').then(d => { State.user = d.user; enterDesktop(); }).catch(() => {
+      State.token = ''; localStorage.removeItem('mhjc_token');
+    });
+  }
+}
+
+async function doLogin(){
+  const username = $('#lgUser').value.trim();
+  const password = $('#lgPass').value;
+  if (!username || !password) return showAuthError('请输入用户名和密码');
+  const btn = $('#btnLogin');
+  btn.disabled = true; btn.textContent = '登录中…';
+  try{
+    const d = await api('/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, device_id: DEVICE_ID })
+    });
+    State.token = d.token;
+    State.user = d.user;
+    localStorage.setItem('mhjc_token', d.token);
+    toast('欢迎回来，' + (d.user.nickname || d.user.username), 'ok');
+    enterDesktop();
+  }catch(e){
+    showAuthError(e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '登 录';
+  }
+}
+
+async function doRegister(){
+  const username = $('#rgUser').value.trim();
+  const nickname = $('#rgNick').value.trim();
+  const password = $('#rgPass').value;
+  const password2 = $('#rgPass2').value;
+  if (!username || !password) return showAuthError('请填写用户名和密码');
+  if (username.length < 2) return showAuthError('用户名至少 2 个字符');
+  if (password.length < 1) return showAuthError('密码不能为空');
+  if (password !== password2) return showAuthError('两次输入的密码不一致');
+
+  const btn = $('#btnRegister');
+  btn.disabled = true; btn.textContent = '注册中…';
+  try{
+    const d = await api('/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username, password, nickname: nickname || username,
+        device_id: DEVICE_ID
+      })
+    });
+    State.token = d.token;
+    State.user = d.user;
+    localStorage.setItem('mhjc_token', d.token);
+    toast('注册成功，欢迎加入 mhjc', 'ok');
+    enterDesktop();
+  }catch(e){
+    showAuthError(e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '注册并进入';
+  }
+}
+
+/* ==================================================================
+   三、桌面
+   ================================================================== */
+function enterDesktop(){
+  const authEl = $('#auth');
+  authEl.style.transition = 'opacity .55s ' + EASE + ', transform .55s ' + EASE;
+  authEl.style.opacity = '0';
+  authEl.style.transform = 'scale(1.06)';
+  setTimeout(() => {
+    authEl.classList.remove('show');
+    authEl.style.opacity = '';
+    authEl.style.transform = '';
+    const desk = $('#desktop');
+    desk.classList.add('show');
+    setTimeout(() => { desk.style.opacity = '1'; }, 20);
+    bootDesktop();
+  }, 560);
+}
+
+function bootDesktop(){
+  updateMenuBar();
+  startClock();
+  loadWallpaper();
+  loadApps();
+  renderDeskIcons();
+  renderDock();
+  bindGlobalKeys();
+  initMhjcBridge();
+
+  setInterval(() => {
+    api('/me').then(d => {
+      State.user = d.user;
+      updateMenuBar();
+    }).catch(() => {});
+  }, 20000);
+}
+
+function updateMenuBar(){
+  if (!State.user) return;
+  $('#mbUser').textContent = State.user.nickname || State.user.username;
+  $('#mbBalance').textContent = 'MJ ' + (Number(State.user.balance) || 0).toFixed(2);
+}
+
+function startClock(){
+  const upd = () => {
+    const d = new Date();
+    const w = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+    const p = n => String(n).padStart(2, '0');
+    $('#mbClock').textContent =
+      w + ' ' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  };
+  upd();
+  setInterval(upd, 10000);
+}
+
+/* ---------------- 壁纸（localStorage + IndexedDB） ---------------- */
+const WP_PRESETS = [
+  { id:'default', name:'深空',   css:'linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)' },
+  { id:'aurora',  name:'极光',   css:'linear-gradient(135deg,#0f2027 0%,#203a43 40%,#2c5364 100%)' },
+  { id:'sunset',  name:'日落',   css:'linear-gradient(135deg,#ff512f 0%,#dd2476 100%)' },
+  { id:'purple',  name:'紫夜',   css:'linear-gradient(135deg,#42275a 0%,#734b6d 100%)' },
+  { id:'ocean',   name:'深海',   css:'linear-gradient(135deg,#000428 0%,#004e92 100%)' },
+  { id:'forest',  name:'森林',   css:'linear-gradient(135deg,#134e5e 0%,#71b280 100%)' },
+  { id:'candy',   name:'糖果',   css:'linear-gradient(135deg,#fc466b 0%,#3f5efb 100%)' },
+  { id:'mono',    name:'纯黑',   css:'linear-gradient(135deg,#000 0%,#1c1c1e 100%)' }
+];
+
+/* IndexedDB 简单封装 */
+const IDB = (() => {
+  const DB_NAME = 'mhjc_store', STORE = 'files';
+  let dbp = null;
+  function open(){
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      const r = indexedDB.open(DB_NAME, 1);
+      r.onupgradeneeded = () => {
+        if (!r.result.objectStoreNames.contains(STORE)) r.result.createObjectStore(STORE);
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return dbp;
+  }
+  return {
+    async set(key, val){
+      const db = await open();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(val, key);
+        tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+      });
+    },
+    async get(key){
+      const db = await open();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(STORE, 'readonly');
+        const rq = tx.objectStore(STORE).get(key);
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = () => rej(rq.error);
+      });
+    },
+    async del(key){
+      const db = await open();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).delete(key);
+        tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+      });
+    }
+  };
+})();
+
+function getWpSetting(){
+  try{ return JSON.parse(localStorage.getItem('mhjc_wallpaper') || 'null'); }catch(e){ return null; }
+}
+function setWpSetting(obj){
+  localStorage.setItem('mhjc_wallpaper', JSON.stringify(obj));
+}
+
+async function loadWallpaper(){
+  const s = getWpSetting() || { type:'preset', id:'default' };
+  applyWallpaper(s);
+}
+
+async function applyWallpaper(s){
+  const wp = $('#wallpaper');
+  // 清理旧的 video
+  const oldV = wp.querySelector('video');
+  if (oldV){ oldV.pause(); oldV.removeAttribute('src'); oldV.load(); oldV.remove(); }
+  wp.style.backgroundImage = '';
+  wp.style.background = '';
+
+  if (s.type === 'preset'){
+    const p = WP_PRESETS.find(x => x.id === s.id) || WP_PRESETS[0];
+    wp.style.background = p.css;
+    wp.style.backgroundSize = 'cover';
+  }
+  else if (s.type === 'image'){
+    let url = s.url;
+    if (!url && s.key){
+      const blob = await IDB.get(s.key);
+      if (blob) url = URL.createObjectURL(blob);
+    }
+    if (url){
+      wp.style.backgroundImage = 'url("' + url + '")';
+      wp.style.backgroundSize = 'cover';
+      wp.style.backgroundPosition = 'center';
+    }
+  }
+  else if (s.type === 'video'){
+    let url = s.url;
+    if (!url && s.key){
+      const blob = await IDB.get(s.key);
+      if (blob) url = URL.createObjectURL(blob);
+    }
+    if (url){
+      const v = document.createElement('video');
+      v.src = url;
+      v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+      v.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+      wp.insertBefore(v, wp.firstChild);
+      v.play().catch(() => {});
+      // 切后台自动暂停
+      if (!window.__wpVisBound){
+        window.__wpVisBound = true;
+        document.addEventListener('visibilitychange', () => {
+          const vv = $('#wallpaper').querySelector('video');
+          if (!vv) return;
+          document.hidden ? vv.pause() : vv.play().catch(() => {});
+        });
+      }
+    }
+  }
+  State.settings.wallpaper = s;
+}
+
+async function setWallpaperFile(file){
+  const isVideo = file.type.startsWith('video/');
+  const key = 'wp_' + Date.now();
+  await IDB.set(key, file);
+  const blob = await IDB.get(key);
+  const url = URL.createObjectURL(blob);
+  const s = { type: isVideo ? 'video' : 'image', key, url };
+  setWpSetting({ type: s.type, key });
+  await applyWallpaper(s);
+  toast('壁纸已更新', 'ok');
+}
+
+/* ==================================================================
+   四、应用注册表
+   ================================================================== */
+const BUILTIN_APPS = {
+  appstore: { id:'appstore', name:'AppStore', icon:'🛍️', color:'#0a84ff', render: renderAppStore },
+  settings: { id:'settings', name:'设置',     icon:'⚙️', color:'#8e8e93', render: renderSettings },
+  alipay:   { id:'alipay',   name:'支付宝',   icon:'💙', color:'#1677ff', render: renderAlipay },
+  qq:       { id:'qq',       name:'QQ',       icon:'🐧', color:'#12b7f5', render: renderQQ },
+  docs:     { id:'docs',     name:'开发者文档',icon:'📘', color:'#30d158', render: renderDocs }
+};
+
+function allApps(){
+  const list = Object.values(BUILTIN_APPS).slice();
+  for (const inst of State.installed){
+    const app = State.apps.find(a => a.id === inst.app_id);
+    if (app){
+      list.push({
+        id: 'app_' + app.id,
+        realId: app.id,
+        name: app.name,
+        icon: app.icon,
+        isUserApp: true,
+        version: app.version,
+        appData: app,
+        render: (body) => renderUserApp(body, app)
+      });
+    }
+  }
+  return list;
+}
+
+async function loadApps(){
+  try{
+    const d = await api('/apps');
+    State.apps = d.apps || [];
+  }catch(e){ State.apps = []; }
+  try{
+    const d2 = await api('/myapps');
+    State.installed = d2.apps || [];
+  }catch(e){ State.installed = []; }
+  renderDeskIcons();
+  renderDock();
+  refreshStoreUI();
+}
+
+/* ---------------- 桌面图标 ---------------- */
+function renderDeskIcons(){
+  const wrap = $('#deskIcons');
+  wrap.innerHTML = '';
+  const list = allApps().filter(a => a.id !== 'appstore' && a.id !== 'settings');
+  list.forEach(app => {
+    const el = document.createElement('div');
+    el.className = 'desk-icon';
+    el.innerHTML =
+      '<div class="di-img">' + iconHTML(app.icon) + '</div>' +
+      '<div class="di-name">' + esc(app.name) + '</div>';
+    el.ondblclick = () => openApp(app.id);
+    wrap.appendChild(el);
+  });
+}
+
+function iconHTML(icon){
+  if (!icon) return '📦';
+  if (icon.startsWith('data:') || icon.startsWith('http') || icon.startsWith('/'))
+    return '<img src="' + esc(icon) + '" alt="">';
+  return esc(icon);
+}
+
+/* ---------------- Dock ---------------- */
+function renderDock(){
+  const dock = $('#dock');
+  dock.innerHTML = '';
+  const list = allApps();
+  list.forEach(app => {
+    const el = document.createElement('div');
+    el.className = 'dock-item' + (State.windows[app.id] ? ' dock-running' : '');
+    el.dataset.appid = app.id;
+    el.innerHTML = iconHTML(app.icon) + '<div class="tip">' + esc(app.name) + '</div>';
+    el.onclick = () => openApp(app.id);
+    dock.appendChild(el);
+  });
+  // 分隔线 + 废纸篓
+  const sep = document.createElement('div');
+  sep.className = 'dock-sep';
+  dock.appendChild(sep);
+  const trash = document.createElement('div');
+  trash.className = 'dock-item';
+  trash.innerHTML = '🗑️<div class="tip">废纸篓</div>';
+  trash.onclick = () => toast('废纸篓是空的', 'info');
+  dock.appendChild(trash);
+}
+
+/* ==================================================================
+   五、窗口管理
+   ================================================================== */
+function openApp(appId){
+  const app = allApps().find(a => a.id === appId);
+  if (!app) return;
+
+  if (State.windows[appId]){
+    const w = State.windows[appId];
+    w.el.classList.remove('minimized');
+    focusWindow(appId);
+    return;
+  }
+
+  const el = document.createElement('div');
+  el.className = 'window';
+  const wCount = Object.keys(State.windows).length;
+  const W = Math.min(880, innerWidth - 80);
+  const H = Math.min(600, innerHeight - 140);
+  const left = Math.max(16, Math.min(innerWidth - W - 16, 90 + wCount * 32));
+  const top = Math.max(46, Math.min(innerHeight - H - 90, 62 + wCount * 26));
+  el.style.cssText = 'left:' + left + 'px;top:' + top + 'px;width:' + W + 'px;height:' + H + 'px';
+
+  el.innerHTML =
+    '<div class="win-bar">' +
+      '<div class="traffic">' +
+        '<div class="tl close" data-act="close"><span>×</span></div>' +
+        '<div class="tl min" data-act="min"><span>−</span></div>' +
+        '<div class="tl max" data-act="max"><span>+</span></div>' +
+      '</div>' +
+      '<div class="win-title">' + esc(app.name) + '</div>' +
+    '</div>' +
+    '<div class="win-body"></div>' +
+    '<div class="win-resize"></div>';
+
+  $('#desktop').appendChild(el);
+  const body = el.querySelector('.win-body');
+
+  const winObj = { el, app, body, minimized: false, maximized: false, prevRect: null };
+  State.windows[appId] = winObj;
+
+  // 关闭 / 最小化 / 最大化
+  el.querySelector('.traffic').addEventListener('click', e => {
+    const tl = e.target.closest('.tl');
+    if (!tl) return;
+    const act = tl.dataset.act;
+    if (act === 'close') closeWindow(appId);
+    else if (act === 'min') minimizeWindow(appId);
+    else if (act === 'max') toggleMaximize(appId);
+  });
+
+  // 拖动
+  makeDraggable(el, el.querySelector('.win-bar'));
+  // 调整大小
+  makeResizable(el, el.querySelector('.win-resize'));
+
+  el.addEventListener('mousedown', () => focusWindow(appId));
+
+  // 渲染内容
+  try{
+    app.render(body, winObj);
+  }catch(err){
+    body.innerHTML = '<div class="empty"><span class="big">😵</span>应用渲染失败<br>' +
+      esc(err.message) + '</div>';
+  }
+
+  focusWindow(appId);
+  renderDock();
+  $('#mbActive').textContent = app.name;
+}
+
+function focusWindow(appId){
+  Object.keys(State.windows).forEach(k => {
+    State.windows[k].el.style.zIndex = 100;
+    State.windows[k].el.style.filter = 'brightness(.92)';
+  });
+  const w = State.windows[appId];
+  if (!w) return;
+  w.el.style.zIndex = ++State.zIndex + 100;
+  w.el.style.filter = 'none';
+  $('#mbActive').textContent = w.app.name;
+}
+
+function closeWindow(appId){
+  const w = State.windows[appId];
+  if (!w) return;
+  w.el.classList.add('closing');
+  if (w.cleanup) try{ w.cleanup(); }catch(e){}
+  setTimeout(() => {
+    w.el.remove();
+    delete State.windows[appId];
+    renderDock();
+  }, 240);
+}
+
+function minimizeWindow(appId){
+  const w = State.windows[appId];
+  if (!w) return;
+  w.el.classList.add('minimized');
+  w.minimized = true;
+}
+
+function toggleMaximize(appId){
+  const w = State.windows[appId];
+  if (!w) return;
+  if (w.maximized){
+    const r = w.prevRect;
+    w.el.style.left = r.left; w.el.style.top = r.top;
+    w.el.style.width = r.width; w.el.style.height = r.height;
+    w.maximized = false;
+  }else{
+    w.prevRect = {
+      left: w.el.style.left, top: w.el.style.top,
+      width: w.el.style.width, height: w.el.style.height
+    };
+    w.el.style.left = '0px';
+    w.el.style.top = '30px';
+    w.el.style.width = innerWidth + 'px';
+    w.el.style.height = (innerHeight - 30) + 'px';
+    w.maximized = true;
+  }
+}
+
+function makeDraggable(el, handle){
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  handle.addEventListener('mousedown', e => {
+    if (e.target.closest('.tl')) return;
+    if (e.button !== 0) return;
+    dragging = true;
+    sx = e.clientX; sy = e.clientY;
+    ox = parseInt(el.style.left) || 0;
+    oy = parseInt(el.style.top) || 0;
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  const move = e => {
+    if (!dragging) return;
+    const nx = Math.max(-el.offsetWidth + 80, Math.min(innerWidth - 80, ox + e.clientX - sx));
+    const ny = Math.max(30, Math.min(innerHeight - 40, oy + e.clientY - sy));
+    el.style.left = nx + 'px';
+    el.style.top = ny + 'px';
+  };
+  const up = () => { dragging = false; document.body.style.cursor = ''; };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+function makeResizable(el, handle){
+  let rz = false, sx = 0, sy = 0, ow = 0, oh = 0;
+  handle.addEventListener('mousedown', e => {
+    rz = true;
+    sx = e.clientX; sy = e.clientY;
+    ow = el.offsetWidth; oh = el.offsetHeight;
+    e.preventDefault(); e.stopPropagation();
+  });
+  const move = e => {
+    if (!rz) return;
+    el.style.width = Math.max(340, ow + e.clientX - sx) + 'px';
+    el.style.height = Math.max(240, oh + e.clientY - sy) + 'px';
+  };
+  const up = () => { rz = false; };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+/* ---------------- 键盘快捷键 ---------------- */
+function bindGlobalKeys(){
+  document.addEventListener('keydown', e => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && e.key.toLowerCase() === 'w'){
+      const top = topWindow();
+      if (top){ e.preventDefault(); closeWindow(top); }
+    }
+    if (meta && e.key.toLowerCase() === 'm'){
+      const top = topWindow();
+      if (top){ e.preventDefault(); minimizeWindow(top); }
+    }
+    if (e.key === 'Escape'){
+      const m = $('#modal');
+      if (m.classList.contains('show')) closeModal();
+    }
+    if (meta && e.key.toLowerCase() === 'q'){
+      e.preventDefault();
+      if (confirm('退出 mhjc？')) doLogout();
+    }
+  });
+}
+
+function topWindow(){
+  let best = null, bestZ = -1;
+  Object.keys(State.windows).forEach(k => {
+    const w = State.windows[k];
+    if (w.minimized) return;
+    const z = parseInt(w.el.style.zIndex) || 0;
+    if (z > bestZ){ bestZ = z; best = k; }
+  });
+  return best;
+}
+
+/* ==================================================================
+   六、模态框
+   ================================================================== */
+function openModal(html, wide){
+  const box = $('#modalBox');
+  box.className = 'modal-box' + (wide ? ' wide' : '');
+  box.innerHTML = html;
+  $('#modal').classList.add('show');
+}
+function closeModal(){
+  const m = $('#modal');
+  m.style.opacity = '0';
+  setTimeout(() => {
+    m.classList.remove('show');
+    m.style.opacity = '';
+    $('#modalBox').innerHTML = '';
+  }, 200);
+}
+$('#modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+/* ==================================================================
+   七、设置应用
+   ================================================================== */
+function renderSettings(body){
+  body.innerHTML =
+    '<div class="set-nav">' +
+      '<button class="set-tab active" data-t="wall">壁纸</button>' +
+      '<button class="set-tab" data-t="account">账户</button>' +
+      '<button class="set-tab" data-t="about">关于</button>' +
+      '<button class="set-tab" data-t="debug">调试</button>' +
+    '</div>' +
+    '<div id="setPane" class="pane"></div>';
+
+  const pane = body.querySelector('#setPane');
+  const tabs = body.querySelectorAll('.set-tab');
+  tabs.forEach(t => {
+    t.onclick = () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      renderSettingsTab(pane, t.dataset.t);
+    };
+  });
+  renderSettingsTab(pane, 'wall');
+}
+
+function renderSettingsTab(pane, tab){
+  pane.style.animation = 'none';
+  void pane.offsetWidth;
+  pane.style.animation = 'winIn .3s ' + EASE;
+
+  if (tab === 'wall') renderWallTab(pane);
+  else if (tab === 'account') renderAccountTab(pane);
+  else if (tab === 'about') renderAboutTab(pane);
+  else renderDebugTab(pane);
+}
+
+function renderWallTab(pane){
+  const cur = getWpSetting() || { type:'preset', id:'default' };
+  pane.innerHTML =
+    '<div class="h1">壁纸</div>' +
+    '<div class="muted" style="margin-bottom:16px">选择内置壁纸，或上传图片 / 视频作为动态壁纸</div>' +
+    '<div class="row" style="margin-bottom:16px;gap:10px">' +
+      '<label class="btn-s gray" style="cursor:pointer">📷 上传图片<input type="file" accept="image/*" id="wpImg" class="hidden"></label>' +
+      '<label class="btn-s gray" style="cursor:pointer">🎬 上传视频<input type="file" accept="video/*" id="wpVid" class="hidden"></label>' +
+      '<button class="btn-s gray" id="wpReset">恢复默认</button>' +
+    '</div>' +
+    '<div class="h2">内置壁纸</div>' +
+    '<div class="wp-grid" id="wpGrid"></div>';
+
+  const grid = pane.querySelector('#wpGrid');
+  WP_PRESETS.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'wp-item' + (cur.type === 'preset' && cur.id === p.id ? ' active' : '');
+    el.style.background = p.css;
+    el.innerHTML = '<div class="wp-label">' + esc(p.name) + '</div>';
+    el.onclick = async () => {
+      setWpSetting({ type:'preset', id:p.id });
+      await applyWallpaper({ type:'preset', id:p.id });
+      grid.querySelectorAll('.wp-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      toast('壁纸已切换：' + p.name, 'ok');
+    };
+    grid.appendChild(el);
+  });
+
+  pane.querySelector('#wpImg').onchange = async e => {
+    const f = e.target.files[0];
+    if (f) await setWallpaperFile(f);
+  };
+  pane.querySelector('#wpVid').onchange = async e => {
+    const f = e.target.files[0];
+    if (f) await setWallpaperFile(f);
+  };
+  pane.querySelector('#wpReset').onclick = async () => {
+    localStorage.removeItem('mhjc_wallpaper');
+    await applyWallpaper({ type:'preset', id:'default' });
+    renderWallTab(pane);
+    toast('已恢复默认壁纸', 'ok');
+  };
+}
+
+function renderAccountTab(pane){
+  const u = State.user || {};
+  pane.innerHTML =
+    '<div class="h1">账户</div>' +
+    '<div class="muted" style="margin-bottom:18px">管理你的 mhjc 账号信息</div>' +
+    '<div class="card row" style="gap:16px">' +
+      '<div class="app-icon" style="border-radius:50%">' + esc((u.nickname || u.username || 'M')[0].toUpperCase()) + '</div>' +
+      '<div class="grow">' +
+        '<div style="font-size:16px;font-weight:700">' + esc(u.nickname || u.username || '-') + '</div>' +
+        '<div class="muted">@' + esc(u.username || '-') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="muted">MJ 余额</div>' +
+        '<div style="font-size:20px;font-weight:700;color:#ffd60a">' + (Number(u.balance) || 0).toFixed(2) + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:20px">修改昵称</div>' +
+    '<div class="row" style="gap:10px">' +
+      '<input class="inp" id="acNick" value="' + esc(u.nickname || '') + '" placeholder="新昵称">' +
+      '<button class="btn-s" id="acNickBtn">保存</button>' +
+    '</div>' +
+
+    '<div class="h2" style="margin-top:22px">修改密码</div>' +
+    '<div class="fgroup"><input class="inp" type="password" id="acOld" placeholder="当前密码"></div>' +
+    '<div class="fgroup"><input class="inp" type="password" id="acNew" placeholder="新密码"></div>' +
+    '<div class="fgroup"><input class="inp" type="password" id="acNew2" placeholder="确认新密码"></div>' +
+    '<button class="btn-s" id="acPwdBtn">修改密码</button>' +
+
+    '<div class="h2" style="margin-top:22px">设备信息</div>' +
+    '<div class="card"><div class="muted" style="word-break:break-all;font-family:monospace">' +
+      esc(DEVICE_ID) + '</div>' +
+      '<div class="muted" style="margin-top:6px">一个设备仅可注册一个账号</div>' +
+    '</div>' +
+
+    '<div style="margin-top:22px">' +
+      '<button class="btn-s red" id="acLogout">退出登录</button>' +
+    '</div>';
+
+  pane.querySelector('#acNickBtn').onclick = async () => {
+    const nick = pane.querySelector('#acNick').value.trim();
+    if (!nick) return toast('昵称不能为空', 'err');
+    try{
+      const d = await api('/profile', { method:'POST', body: JSON.stringify({ nickname: nick }) });
+      State.user = d.user;
+      updateMenuBar();
+      toast('昵称已更新', 'ok');
+      renderAccountTab(pane);
+    }catch(e){ toast(e.message, 'err'); }
+  };
+
+  pane.querySelector('#acPwdBtn').onclick = async () => {
+    const o = pane.querySelector('#acOld').value;
+    const n = pane.querySelector('#acNew').value;
+    const n2 = pane.querySelector('#acNew2').value;
+    if (!o || !n) return toast('请填写完整', 'err');
+    if (n !== n2) return toast('两次密码不一致', 'err');
+    try{
+      await api('/password', { method:'POST', body: JSON.stringify({ old: o, new: n }) });
+      toast('密码已修改', 'ok');
+      pane.querySelector('#acOld').value = '';
+      pane.querySelector('#acNew').value = '';
+      pane.querySelector('#acNew2').value = '';
+    }catch(e){ toast(e.message, 'err'); }
+  };
+
+  pane.querySelector('#acLogout').onclick = () => {
+    if (confirm('确定退出登录？')) doLogout();
+  };
+}
+
+function renderAboutTab(pane){
+  pane.innerHTML =
+    '<div class="h1">关于 mhjc</div>' +
+    '<div class="muted" style="margin-bottom:20px">一个网页版的 macOS 风格桌面系统</div>' +
+    '<div class="card row" style="gap:16px">' +
+      '<div class="app-icon" style="background:linear-gradient(135deg,#0a84ff,#bf5af2);font-size:24px;font-weight:800">M</div>' +
+      '<div class="grow">' +
+        '<div style="font-size:17px;font-weight:700">mhjc</div>' +
+        '<div class="muted">版本 1.0.0</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="h2">核心特性</div>' +
+      '<div class="muted" style="line-height:2">' +
+        '• 启动动画 / 身份资料确认<br>' +
+        '• AppStore 应用商店（支持用户投稿）<br>' +
+        '• 动态壁纸（图片 / 视频）<br>' +
+        '• MJ 通用货币与支付宝<br>' +
+        '• 内置 QQ 即时通讯<br>' +
+        '• 开发者 AI 提示词生成器<br>' +
+        '• 完整的 Python 后端支持' +
+      '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="h2">键盘快捷键</div>' +
+      '<div class="muted" style="line-height:2">' +
+        '⌘/Ctrl + W — 关闭当前窗口<br>' +
+        '⌘/Ctrl + M — 最小化当前窗口<br>' +
+        '⌘/Ctrl + Q — 退出登录<br>' +
+        'Esc — 关闭弹窗' +
+      '</div>' +
+    '</div>';
+}
+
+function renderDebugTab(pane){
+  pane.innerHTML =
+    '<div class="h1">调试工具</div>' +
+    '<div class="muted" style="margin-bottom:16px">开发者专用，用于快速排查问题</div>' +
+    '<div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:16px">' +
+      '<button class="btn-s gray" data-dbg="status">服务器状态</button>' +
+      '<button class="btn-s gray" data-dbg="me">我的信息</button>' +
+      '<button class="btn-s gray" data-dbg="apps">应用列表</button>' +
+      '<button class="btn-s gray" data-dbg="logs">充值记录</button>' +
+      '<button class="btn-s gray" data-dbg="ping">Ping 测试</button>' +
+      '<button class="btn-s gray" data-dbg="cache">清空本地缓存</button>' +
+    '</div>' +
+    '<pre id="dbgOut" style="background:rgba(0,0,0,.36);border:1px solid rgba(255,255,255,.09);' +
+      'border-radius:12px;padding:14px;font-size:11.5px;line-height:1.7;' +
+      'font-family:ui-monospace,Menlo,monospace;max-height:340px;overflow:auto;white-space:pre-wrap;' +
+      'word-break:break-all;color:#9be89b">点击上方按钮查看调试信息…</pre>';
+
+  const out = pane.querySelector('#dbgOut');
+  const show = o => { out.textContent = typeof o === 'string' ? o : JSON.stringify(o, null, 2); };
+
+  pane.querySelectorAll('[data-dbg]').forEach(b => {
+    b.onclick = async () => {
+      const k = b.dataset.dbg;
+      try{
+        if (k === 'status')  show(await api('/debug/status'));
+        else if (k === 'me') show(await api('/me'));
+        else if (k === 'apps') show(await api('/apps'));
+        else if (k === 'logs') show(await api('/pay/logs'));
+        else if (k === 'ping'){
+          const t = performance.now();
+          await api('/ping');
+          show('Pong! 往返耗时 ' + (performance.now() - t).toFixed(1) + ' ms');
+        }
+        else if (k === 'cache'){
+          if (confirm('确定清空本地缓存？将退出登录')){
+            localStorage.clear();
+            location.reload();
+          }
+        }
+      }catch(e){ show('❌ ' + e.message); }
+    };
+  });
+}
+
+/* ==================================================================
+   八、AppStore
+   ================================================================== */
+let storeTab = 'all';
+function refreshStoreUI(){
+  const pane = document.querySelector('#storePane');
+  if (pane) renderStoreList(pane);
+}
+
+function renderAppStore(body){
+  body.innerHTML =
+    '<div class="store-head">' +
+      '<div class="row between">' +
+        '<div>' +
+          '<div class="h1">AppStore</div>' +
+          '<div class="muted">发现、下载、投稿你的 HTML 应用</div>' +
+        '</div>' +
+        '<button class="btn-s" id="publishBtn">＋ 投稿应用</button>' +
+      '</div>' +
+      '<div class="row" style="gap:8px;margin-top:14px">' +
+        '<button class="btn-s gray store-tab active" data-st="all">全部</button>' +
+        '<button class="btn-s gray store-tab" data-st="installed">已安装</button>' +
+        '<button class="btn-s gray store-tab" data-st="mine">我的投稿</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="pane" id="storePane"></div>';
+
+  const pane = body.querySelector('#storePane');
+  body.querySelectorAll('.store-tab').forEach(t => {
+    t.onclick = () => {
+      body.querySelectorAll('.store-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      storeTab = t.dataset.st;
+      renderStoreList(pane);
+    };
+  });
+  body.querySelector('#publishBtn').onclick = () => showPublishDialog();
+  renderStoreList(pane);
+}
+
+function renderStoreList(pane){
+  pane.style.animation = 'none';
+  void pane.offsetWidth;
+  pane.style.animation = 'winIn .28s ' + EASE;
+
+  let list = State.apps.slice();
+
+  if (storeTab === 'installed'){
+    const ids = State.installed.map(i => i.app_id);
+    list = list.filter(a => ids.includes(a.id));
+    if (!list.length){
+      pane.innerHTML = '<div class="empty"><span class="big">📦</span>还没有安装任何应用<br>' +
+        '去「全部」看看吧</div>';
+      return;
+    }
+  }
+
+  if (storeTab === 'mine'){
+    pane.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+    api('/apps/mine').then(d => {
+      const mine = d.apps || [];
+      if (!mine.length){
+        pane.innerHTML = '<div class="empty"><span class="big">✍️</span>你还没有投稿过应用<br>' +
+          '点击右上角「投稿应用」开始创作</div>';
+        return;
+      }
+      pane.innerHTML = mine.map(a => appRowHTML(a, true)).join('');
+      bindAppRows(pane);
+    }).catch(e => {
+      pane.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+    });
+    return;
+  }
+
+  if (!list.length){
+    pane.innerHTML = '<div class="empty"><span class="big">🛍️</span>商店暂时没有应用<br>' +
+      '成为第一个投稿者吧</div>';
+    return;
+  }
+
+  pane.innerHTML = list.map(a => appRowHTML(a, false)).join('');
+  bindAppRows(pane);
+}
+
+function appRowHTML(a, isMine){
+  const installed = State.installed.some(i => i.app_id === a.id);
+  const inst = State.installed.find(i => i.app_id === a.id);
+  const hasUpdate = installed && inst && inst.version !== a.version;
+  const statusTag = isMine
+    ? (a.status === 'published'
+        ? '<span class="tag ok">已上架</span>'
+        : a.status === 'rejected'
+          ? '<span class="tag err">已拒绝</span>'
+          : '<span class="tag warn">审核中</span>')
+    : '';
+
+  let btn;
+  if (isMine){
+    btn = '<button class="btn-s gray" data-act="edit" data-id="' + a.id + '">编辑</button>';
+  }else if (!installed){
+    btn = '<button class="btn-s" data-act="install" data-id="' + a.id + '">获取</button>';
+  }else if (hasUpdate){
+    btn = '<button class="btn-s green" data-act="update" data-id="' + a.id + '">更新</button>';
+  }else{
+    btn = '<button class="btn-s gray" data-act="open" data-id="' + a.id + '">打开</button>';
+  }
+
+  return '<div class="card hoverable">' +
+    '<div class="app-item">' +
+      '<div class="app-icon">' + iconHTML(a.icon) + '</div>' +
+      '<div class="grow">' +
+        '<div class="row" style="gap:8px">' +
+          '<div style="font-size:15px;font-weight:600">' + esc(a.name) + '</div>' +
+          (a.has_backend ? '<span class="ai-badge">后端</span>' : '') +
+          statusTag +
+        '</div>' +
+        '<div class="muted" style="margin-top:3px;overflow:hidden;text-overflow:ellipsis;' +
+          'white-space:nowrap">' + esc(a.description || '暂无描述') + '</div>' +
+        '<div class="muted" style="margin-top:4px;font-size:11px">' +
+          'v' + esc(a.version || '1.0.0') + ' · ' +
+          esc(a.developer_name || '匿名') + ' · ' +
+          (a.downloads || 0) + ' 次下载' +
+        '</div>' +
+      '</div>' +
+      '<div style="flex-shrink:0">' + btn + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function bindAppRows(pane){
+  pane.querySelectorAll('[data-act]').forEach(b => {
+    b.onclick = async () => {
+      const id = parseInt(b.dataset.id, 10);
+      const act = b.dataset.act;
+      try{
+        if (act === 'install'){
+          b.disabled = true; b.textContent = '安装中';
+          await api('/apps/' + id + '/install', { method:'POST' });
+          await loadApps();
+          toast('安装成功', 'ok');
+        }
+        else if (act === 'update'){
+          b.disabled = true; b.textContent = '更新中';
+          await api('/apps/' + id + '/install', { method:'POST' });
+          await loadApps();
+          toast('已更新到最新版本', 'ok');
+        }
+        else if (act === 'open'){
+          openApp('app_' + id);
+        }
+        else if (act === 'edit'){
+          const app = State.apps.find(x => x.id === id);
+          showPublishDialog(app);
+        }
+      }catch(e){
+        toast(e.message, 'err');
+        b.disabled = false;
+        b.textContent = act === 'install' ? '获取' : '更新';
+      }
+    };
+  });
+}
+
+/* ---------------- 投稿应用对话框 ---------------- */
+function showPublishDialog(existing){
+  const isEdit = !!existing;
+  openModal(
+    '<div class="modal-title">' + (isEdit ? '编辑应用' : '投稿应用') + '</div>' +
+
+    '<div class="fgroup"><label>应用名称 *</label>' +
+      '<input class="inp" id="pbName" placeholder="例如：待办清单" value="' +
+        esc(existing ? existing.name : '') + '"></div>' +
+
+    '<div class="fgroup"><label>应用图标（Emoji 或图片 URL）</label>' +
+      '<input class="inp" id="pbIcon" placeholder="📝 或 https://..." value="' +
+        esc(existing ? (existing.icon || '') : '📦') + '"></div>' +
+
+    '<div class="fgroup"><label>分类</label>' +
+      '<input class="inp" id="pbCat" placeholder="工具 / 游戏 / 社交…" value="' +
+        esc(existing ? (existing.category || '') : '工具') + '"></div>' +
+
+    '<div class="fgroup"><label>应用描述</label>' +
+      '<textarea class="inp" id="pbDesc" style="min-height:70px" placeholder="简单介绍这个应用…">' +
+        esc(existing ? (existing.description || '') : '') + '</textarea></div>' +
+
+    '<div class="fgroup"><label>版本号</label>' +
+      '<input class="inp" id="pbVer" placeholder="1.0.0" value="' +
+        esc(existing ? existing.version : '1.0.0') + '"></div>' +
+
+    '<div class="fgroup"><label>HTML 代码 *（完整单文件 HTML）</label>' +
+      '<textarea class="inp" id="pbHtml" style="min-height:170px" ' +
+        'placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&lt;/html&gt;"></textarea></div>' +
+
+    '<div class="fgroup">' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">' +
+        '<input type="checkbox" id="pbBackend" ' + (existing && existing.has_backend ? 'checked' : '') + '> ' +
+        '需要 Python 后端（多人联机 / 数据持久化）' +
+      '</label>' +
+    '</div>' +
+
+    '<div class="fgroup hidden" id="pbBackendWrap">' +
+      '<label>后端代码（定义 register(bp, app_id) 函数）</label>' +
+      '<textarea class="inp" id="pbBackendCode" style="min-height:120px" ' +
+        'placeholder="def register(bp, app_id):&#10;    @bp.route(\'/hello\')&#10;    def hello():&#10;        return {\'msg\':\'hi\'}"></textarea>' +
+    '</div>' +
+
+    '<div class="card" style="background:rgba(191,90,242,.11);border-color:rgba(191,90,242,.3)">' +
+      '<div class="h2">🤖 AI 生成提示词</div>' +
+      '<div class="muted" style="margin-bottom:10px;line-height:1.7">' +
+        '有灵感但不会写代码？描述你的想法，系统会生成一段完整的提示词，' +
+        '复制到任意 AI 对话中即可生成应用。</div>' +
+      '<input class="inp" id="pbIdea" placeholder="我想做一个 XX 应用，功能有…" style="margin-bottom:10px">' +
+      '<button class="btn-s" id="pbGenPrompt">生成提示词</button>' +
+    '</div>' +
+
+    '<div class="modal-actions">' +
+      '<button class="btn-s gray" id="pbCancel">取消</button>' +
+      '<button class="btn-s" id="pbSubmit">' + (isEdit ? '保存修改' : '提交审核') + '</button>' +
+    '</div>',
+    true
+  );
+
+  if (existing && existing.html) $('#pbHtml').value = existing.html;
+  if (existing && existing.backend_code) $('#pbBackendCode').value = existing.backend_code;
+
+  const beChk = $('#pbBackend'), beWrap = $('#pbBackendWrap');
+  const syncBE = () => beWrap.classList.toggle('hidden', !beChk.checked);
+  beChk.onchange = syncBE;
+  syncBE();
+
+  $('#pbCancel').onclick = closeModal;
+
+  $('#pbGenPrompt').onclick = () => {
+    const idea = $('#pbIdea').value.trim() || $('#pbDesc').value.trim() || '一个有趣的小应用';
+    const name = $('#pbName').value.trim() || '我的应用';
+    const prompt = buildAIPrompt(name, idea);
+    const box = $('#pbHtml');
+    // 生成提示词放到剪贴板，而不是覆盖 HTML
+    navigator.clipboard.writeText(prompt).then(() => {
+      toast('提示词已复制到剪贴板，粘贴给 AI 即可', 'ok', 3600);
+    }).catch(() => {
+      openModal(
+        '<div class="modal-title">AI 生成提示词（手动复制）</div>' +
+        '<textarea class="inp" style="min-height:400px" id="promptTxt"></textarea>' +
+        '<div class="modal-actions"><button class="btn-s" onclick="closeModal()">关闭</button></div>',
+        true
+      );
+      $('#promptTxt').value = prompt;
+      $('#promptTxt').select();
+    });
+  };
+
+  $('#pbSubmit').onclick = async () => {
+    const payload = {
+      name: $('#pbName').value.trim(),
+      icon: $('#pbIcon').value.trim() || '📦',
+      category: $('#pbCat').value.trim() || '工具',
+      description: $('#pbDesc').value.trim(),
+      version: $('#pbVer').value.trim() || '1.0.0',
+      html: $('#pbHtml').value,
+      has_backend: beChk.checked ? 1 : 0,
+      backend_code: $('#pbBackendCode').value
+    };
+    if (!payload.name) return toast('请填写应用名称', 'err');
+    if (!payload.html || payload.html.length < 20) return toast('请填写完整的 HTML 代码', 'err');
+
+    const btn = $('#pbSubmit');
+    btn.disabled = true; btn.textContent = '提交中…';
+    try{
+      if (isEdit){
+        await api('/apps/' + existing.id, { method:'PUT', body: JSON.stringify(payload) });
+        toast('已保存，等待重新审核', 'ok');
+      }else{
+        await api('/apps/submit', { method:'POST', body: JSON.stringify(payload) });
+        toast('投稿成功，等待管理员审核', 'ok');
+      }
+      closeModal();
+      await loadApps();
+      refreshStoreUI();
+    }catch(e){
+      toast(e.message, 'err');
+      btn.disabled = false;
+      btn.textContent = isEdit ? '保存修改' : '提交审核';
+    }
+  };
+}
+
+function buildAIPrompt(name, idea){
+  return [
+'你是一名资深的 HTML 前端开发者。请帮我生成一个名为「' + name + '」的 Web 应用。',
+'',
+'这个应用将运行在 mhjc 桌面系统的沙箱 iframe 中，请严格遵循下面的接口与规范。',
+'',
+'## 一、可用的 mhjc 原生接口（无需自己实现登录注册）',
+'',
+'1. 获取当前登录用户（系统已自动登录，直接调用即可）：',
+'   const user = await window.mhjc.getUser();',
+'   // user = { id, username, nickname, balance }',
+'',
+'2. 本地持久化存储（按应用隔离）：',
+'   await window.mhjc.storage.set("key", value);',
+'   const v = await window.mhjc.storage.get("key");',
+'',
+'3. 调用本应用专属后端（若勾选「需要 Python 后端」）：',
+'   const res = await window.mhjc.fetch("/api/hello", { method: "POST", body: JSON.stringify({...}) });',
+'   const data = await res.json();',
+'',
+'4. 发起 MJ 支付（用户确认后扣除余额）：',
+'   const ok = await window.mhjc.pay.request(10, "购买道具");',
+'   if (ok) { /* 支付成功 */ }',
+'',
+'5. 系统通知：',
+'   window.mhjc.notify("操作成功");',
+'',
+'## 二、技术要求',
+'',
+'1. 所有代码写在一个 HTML 文件中（HTML + CSS + JS 内联），不依赖外部 CDN。',
+'2. 使用 CSS3 transition / animation，所有交互必须有丝滑过渡动画。',
+'3. 必须同时适配鼠标与键盘操作，常用操作提供键盘快捷键。',
+'4. 响应式布局，最小支持 600px 宽度的窗口。',
+'5. 配色请使用深色玻璃拟态风格，与 macOS 视觉一致。',
+'6. 代码必须无语法错误，可直接运行。',
+'',
+'## 三、应用需求',
+'',
+idea,
+'',
+'## 四、输出要求',
+'',
+'请直接输出完整的 HTML 代码，不要有多余解释。'
+  ].join('\n');
+}
+
+/* ==================================================================
+   九、用户投稿应用渲染（iframe 沙箱）
+   ================================================================== */
+function renderUserApp(body, app){
+  body.innerHTML =
+    '<div style="height:100%;display:flex;flex-direction:column">' +
+      '<iframe id="uFrame" style="flex:1;border:none;width:100%;background:#fff" ' +
+        'sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>' +
+    '</div>';
+
+  const frame = body.querySelector('#uFrame');
+  const token = encodeURIComponent(State.token || '');
+  frame.src = '/app/' + app.id + '?token=' + token;
+
+  // 桥接：iframe 内 window.mhjc 通过 postMessage 与主窗口通信
+  const handler = async (ev) => {
+    const d = ev.data;
+    if (!d || d.__mhjc !== true) return;
+    const { rid, method, args } = d;
+    let result = null, error = null;
+    try{
+      if (method === 'getUser'){
+        result = {
+          id: State.user.id,
+          username: State.user.username,
+          nickname: State.user.nickname,
+          balance: State.user.balance
+        };
+      }
+      else if (method === 'storage.get'){
+        result = await api('/appstore/' + app.id + '/storage/get',
+          { method:'POST', body: JSON.stringify({ key: args[0] }) });
+        result = result.value;
+      }
+      else if (method === 'storage.set'){
+        await api('/appstore/' + app.id + '/storage/set',
+          { method:'POST', body: JSON.stringify({ key: args[0], value: args[1] }) });
+        result = true;
+      }
+      else if (method === 'pay.request'){
+        result = await handlePayRequest(args[0], args[1], app.id);
+      }
+      else if (method === 'notify'){
+        toast(args[0], 'info');
+        result = true;
+      }
+      else if (method === 'close'){
+        closeWindow('app_' + app.id);
+        result = true;
+      }
+      else {
+        error = '未知方法: ' + method;
+      }
+    }catch(e){
+      error = e.message;
+    }
+    frame.contentWindow.postMessage({ __mhjc_res: true, rid, result, error }, '*');
+  };
+  window.addEventListener('message', handler);
+  const win = State.windows['app_' + app.id];
+  if (win) win.cleanup = () => window.removeEventListener('message', handler);
+}
+
+async function handlePayRequest(amount, reason, appId){
+  amount = Number(amount);
+  if (!amount || amount <= 0) return false;
+  return new Promise(resolve => {
+    openModal(
+      '<div class="modal-title">支付确认</div>' +
+      '<div class="card" style="text-align:center;padding:26px">' +
+        '<div class="muted">' + esc(reason || '应用内支付') + '</div>' +
+        '<div style="font-size:40px;font-weight:800;color:#ffd60a;margin:14px 0">' +
+          amount.toFixed(2) + ' <span style="font-size:18px">MJ</span></div>' +
+        '<div class="muted">当前余额：' + (Number(State.user.balance) || 0).toFixed(2) + ' MJ</div>' +
+      '</div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn-s gray" id="payNo">取消</button>' +
+        '<button class="btn-s" id="payYes">确认支付</button>' +
+      '</div>'
+    );
+    $('#payNo').onclick = () => { closeModal(); resolve(false); };
+    $('#payYes').onclick = async () => {
+      try{
+        const d = await api('/pay/pay', {
+          method:'POST',
+          body: JSON.stringify({ amount, reason, app_id: appId })
+        });
+        State.user.balance = d.balance;
+        updateMenuBar();
+        closeModal();
+        toast('支付成功', 'ok');
+        resolve(true);
+      }catch(e){
+        toast(e.message, 'err');
+        closeModal();
+        resolve(false);
+      }
+    };
+  });
+}
+
+/* ==================================================================
+   十、支付宝（MJ 货币）
+   ================================================================== */
+function renderAlipay(body){
+  body.innerHTML = '<div class="pane" id="alipayPane"></div>';
+  drawAlipay(body.querySelector('#alipayPane'));
+}
+
+function drawAlipay(pane){
+  const bal = Number(State.user.balance) || 0;
+  pane.innerHTML =
+    '<div class="wallet">' +
+      '<div style="opacity:.85;font-size:13px">MJ 余额</div>' +
+      '<div class="amt">' + bal.toFixed(2) + '</div>' +
+      '<div style="opacity:.75;font-size:12px">' + esc(State.user.nickname || State.user.username) + '</div>' +
+      '<div class="quick">' +
+        '<button data-q="10">充值 10</button>' +
+        '<button data-q="50">充值 50</button>' +
+        '<button data-q="100">充值 100</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="row" style="gap:10px;margin-bottom:16px">' +
+      '<button class="btn-s" id="apCustom">自定义充值</button>' +
+      '<button class="btn-s gray" id="apTransfer">转账给好友</button>' +
+      '<button class="btn-s gray" id="apLogs">交易记录</button>' +
+    '</div>' +
+
+    '<div class="card">' +
+      '<div class="h2">关于 MJ</div>' +
+      '<div class="muted" style="line-height:1.9">' +
+        'MJ 是 mhjc 系统的通用货币，可用于应用内支付、转账和充值。' +
+        '充值接口受频率限制保护，严禁任何形式的刷 MJ 行为。' +
+        '系统会记录每一笔交易，异常操作将被封禁。' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card">' +
+      '<div class="h2">开发者接入</div>' +
+      '<div class="muted" style="line-height:1.9">' +
+        '在你的应用中调用支付：<br>' +
+        '<code style="background:rgba(0,0,0,.4);padding:3px 8px;border-radius:6px;' +
+        'font-size:11.5px;display:inline-block;margin-top:6px">' +
+        'await window.mhjc.pay.request(金额, "事由")</code>' +
+      '</div>' +
+    '</div>';
+
+  pane.querySelectorAll('[data-q]').forEach(b => {
+    b.onclick = () => doRecharge(Number(b.dataset.q), pane);
+  });
+  pane.querySelector('#apCustom').onclick = () => {
+    const v = prompt('请输入充值金额（MJ）', '20');
+    if (v === null) return;
+    const n = Number(v);
+    if (!n || n <= 0) return toast('金额无效', 'err');
+    doRecharge(n, pane);
+  };
+  pane.querySelector('#apTransfer').onclick = () => showTransferDialog(pane);
+  pane.querySelector('#apLogs').onclick = () => showLogsDialog();
+}
+
+async function doRecharge(amount, pane){
+  try{
+    const d = await api('/pay/recharge', {
+      method:'POST',
+      body: JSON.stringify({ amount })
+    });
+    State.user.balance = d.balance;
+    updateMenuBar();
+    toast('充值成功 +' + amount.toFixed(2) + ' MJ', 'ok');
+    drawAlipay(pane);
+  }catch(e){
+    toast(e.message, 'err');
+  }
+}
+
+function showTransferDialog(pane){
+  openModal(
+    '<div class="modal-title">转账</div>' +
+    '<div class="fgroup"><label>收款人用户名</label>' +
+      '<input class="inp" id="tfUser" placeholder="对方用户名"></div>' +
+    '<div class="fgroup"><label>转账金额（MJ）</label>' +
+      '<input class="inp" id="tfAmt" type="number" placeholder="0.00"></div>' +
+    '<div class="fgroup"><label>备注</label>' +
+      '<input class="inp" id="tfNote" placeholder="可选"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-s gray" onclick="closeModal()">取消</button>' +
+      '<button class="btn-s" id="tfOk">确认转账</button>' +
+    '</div>'
+  );
+  $('#tfOk').onclick = async () => {
+    const to = $('#tfUser').value.trim();
+    const amt = Number($('#tfAmt').value);
+    const note = $('#tfNote').value.trim();
+    if (!to) return toast('请输入收款人', 'err');
+    if (!amt || amt <= 0) return toast('金额无效', 'err');
+    try{
+      const d = await api('/pay/transfer', {
+        method:'POST',
+        body: JSON.stringify({ to, amount: amt, note })
+      });
+      State.user.balance = d.balance;
+      updateMenuBar();
+      closeModal();
+      toast('转账成功', 'ok');
+      drawAlipay(pane);
+    }catch(e){ toast(e.message, 'err'); }
+  };
+}
+
+async function showLogsDialog(){
+  openModal('<div class="modal-title">交易记录</div><div id="logsBox" class="empty">' +
+    '<span class="spinner"></span></div>' +
+    '<div class="modal-actions"><button class="btn-s gray" onclick="closeModal()">关闭</button></div>');
+  try{
+    const d = await api('/pay/logs');
+    const logs = d.logs || [];
+    if (!logs.length){
+      $('#logsBox').innerHTML = '<span class="big">📭</span>暂无交易记录';
+      return;
+    }
+    $('#logsBox').className = '';
+    $('#logsBox').innerHTML = logs.map(l => {
+      const sign = l.amount >= 0 ? '+' : '';
+      const color = l.amount >= 0 ? '#6ee787' : '#ff8b82';
+      return '<div class="card row between" style="padding:12px 14px">' +
+        '<div><div style="font-size:13px">' + esc(l.note || l.type) + '</div>' +
+        '<div class="muted">' + esc(l.created_at) + '</div></div>' +
+        '<div style="font-weight:700;color:' + color + '">' + sign +
+          Number(l.amount).toFixed(2) + '</div>' +
+      '</div>';
+    }).join('');
+  }catch(e){
+    $('#logsBox').innerHTML = '加载失败：' + esc(e.message);
+  }
+}
+
+/* ==================================================================
+   十一、QQ 聊天
+   ================================================================== */
+function renderQQ(body, win){
+  body.innerHTML =
+    '<div class="qq-wrap">' +
+      '<div class="qq-side" id="qqSide">' +
+        '<div style="padding:12px 14px" class="muted">联系人</div>' +
+      '</div>' +
+      '<div class="qq-main">' +
+        '<div class="qq-msgs" id="qqMsgs">' +
+          '<div class="empty"><span class="big">💬</span>选择一个联系人开始聊天</div>' +
+        '</div>' +
+        '<div class="qq-input">' +
+          '<input class="inp" id="qqInput" placeholder="输入消息…" disabled>' +
+          '<button class="btn-s" id="qqSend" disabled>发送</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  let currentPeer = null;
+  let pollTimer = null;
+
+  const side = body.querySelector('#qqSide');
+  const msgs = body.querySelector('#qqMsgs');
+  const input = body.querySelector('#qqInput');
+  const sendBtn = body.querySelector('#qqSend');
+
+  async function loadContacts(){
+    try{
+      const d = await api('/chat/contacts');
+      const list = d.contacts || [];
+      side.innerHTML = '<div style="padding:12px 14px" class="muted">联系人 (' + list.length + ')</div>';
+      if (!list.length){
+        side.innerHTML += '<div style="padding:16px" class="muted">还没有其他用户</div>';
+        return;
+      }
+      list.forEach(u => {
+        const el = document.createElement('div');
+        el.className = 'qq-contact';
+        el.dataset.uid = u.id;
+        el.innerHTML =
+          '<div class="qq-av">' + esc((u.nickname || u.username)[0].toUpperCase()) + '</div>' +
+          '<div class="grow" style="min-width:0">' +
+            '<div style="font-size:13px;font-weight:600;overflow:hidden;' +
+              'text-overflow:ellipsis;white-space:nowrap">' + esc(u.nickname || u.username) + '</div>' +
+            '<div class="muted" style="font-size:11px;overflow:hidden;' +
+              'text-overflow:ellipsis;white-space:nowrap">@' + esc(u.username) + '</div>' +
+          '</div>' +
+          (u.unread ? '<div style="background:#ff453a;border-radius:10px;padding:1px 7px;' +
+            'font-size:10px;font-weight:700">' + u.unread + '</div>' : '');
+        el.onclick = () => selectPeer(u, el);
+        side.appendChild(el);
+      });
+    }catch(e){
+      side.innerHTML += '<div style="padding:14px" class="muted">加载失败</div>';
+    }
+  }
+
+  async function selectPeer(u, el){
+    currentPeer = u;
+    side.querySelectorAll('.qq-contact').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+    await loadMessages();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(loadMessages, 2000);
+  }
+
+  async function loadMessages(){
+    if (!currentPeer) return;
+    try{
+      const d = await api('/chat/messages/' + currentPeer.id);
+      const list = d.messages || [];
+      if (!list.length){
+        msgs.innerHTML = '<div class="empty" style="padding:30px">还没有消息，打个招呼吧 👋</div>';
+        return;
+      }
+      const atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
+      msgs.innerHTML = list.map(m => {
+        const me = m.sender_id === State.user.id;
+        const t = (m.created_at || '').slice(11, 16);
+        return '<div class="msg ' + (me ? 'me' : 'other') + '">' +
+          esc(m.content) + '<div class="t">' + esc(t) + '</div></div>';
+      }).join('');
+      if (atBottom) msgs.scrollTop = msgs.scrollHeight;
+    }catch(e){ /* 静默 */ }
+  }
+
+  async function sendMsg(){
+    const text = input.value.trim();
+    if (!text || !currentPeer) return;
+    input.value = '';
+    try{
+      await api('/chat/send', {
+        method:'POST',
+        body: JSON.stringify({ to: currentPeer.id, content: text })
+      });
+      await loadMessages();
+    }catch(e){ toast(e.message, 'err'); }
+  }
+
+  sendBtn.onclick = sendMsg;
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMsg(); }
+  });
+
+  loadContacts();
+
+  if (win){
+    win.cleanup = () => { if (pollTimer) clearInterval(pollTimer); };
+  }
+}
+
+/* ==================================================================
+   十二、开发者文档
+   ================================================================== */
+function renderDocs(body){
+  body.innerHTML =
+    '<div class="pane">' +
+      '<div class="h1">开发者文档</div>' +
+      '<div class="muted" style="margin-bottom:18px">了解如何为 mhjc 开发 HTML 应用</div>' +
+
+      '<div class="card"><div class="h2">1. 基础结构</div>' +
+        '<div class="muted" style="line-height:1.9">你的应用是一个完整的 HTML 文件，' +
+        '会被加载到 iframe 沙箱中运行。无需自己实现登录注册，' +
+        '直接调用 mhjc 原生接口获取当前用户即可。</div>' +
+        '<pre style="background:rgba(0,0,0,.4);padding:12px;border-radius:10px;' +
+        'font-size:11.5px;margin-top:10px;overflow:auto;color:#9be89b">' +
+'&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n&lt;head&gt;\n  &lt;meta charset="UTF-8"&gt;\n&lt;/head&gt;\n&lt;body&gt;\n  &lt;h1 id="hi"&gt;加载中…&lt;/h1&gt;\n  &lt;script&gt;\n    (async () =&gt; {\n      const u = await window.mhjc.getUser();\n      document.getElementById("hi").textContent =\n        "你好，" + (u.nickname || u.username);\n    })();\n  &lt;/script&gt;\n&lt;/body&gt;\n&lt;/html&gt;</pre>' +
+      '</div>' +
+
+      '<div class="card"><div class="h2">2. 可用接口</div>' +
+        '<div class="muted" style="line-height:2.1">' +
+          '<code>await window.mhjc.getUser()</code> — 获取当前用户<br>' +
+          '<code>await window.mhjc.storage.get(key)</code> — 读取本地数据<br>' +
+          '<code>await window.mhjc.storage.set(key, val)</code> — 写入本地数据<br>' +
+          '<code>await window.mhjc.fetch(path, opts)</code> — 调用自己的 Python 后端<br>' +
+          '<code>await window.mhjc.pay.request(金额, 事由)</code> — 发起 MJ 支付<br>' +
+          '<code>window.mhjc.notify(msg)</code> — 弹出系统通知<br>' +
+          '<code>window.mhjc.close()</code> — 关闭当前应用窗口' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card"><div class="h2">3. Python 后端</div>' +
+        '<div class="muted" style="line-height:1.9">投稿时勾选「需要 Python 后端」，' +
+        '并编写 register 函数：</div>' +
+        '<pre style="background:rgba(0,0,0,.4);padding:12px;border-radius:10px;' +
+        'font-size:11.5px;margin-top:10px;overflow:auto;color:#9be89b">' +
+'def register(bp, app_id):\n    @bp.route("/hello")\n    def hello():\n        return {"msg": "hello from app " + str(app_id)}</pre>' +
+        '<div class="muted" style="margin-top:10px">前端调用：' +
+        '<code>await window.mhjc.fetch("/hello")</code></div>' +
+      '</div>' +
+
+      '<div class="card"><div class="h2">4. MJ 货币规范</div>' +
+        '<div class="muted" style="line-height:1.9">' +
+        '所有支付必须通过 <code>window.mhjc.pay.request()</code> 发起，' +
+        '系统会自动弹出确认框并扣除余额。<br>' +
+        '<b style="color:#ff8b82">严禁</b>绕过系统接口直接修改余额，' +
+        '违规应用将被下架并封禁开发者账号。' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card"><div class="h2">5. UI 规范</div>' +
+        '<div class="muted" style="line-height:1.9">' +
+        '• 使用深色玻璃拟态风格，配合 <code>backdrop-filter: blur()</code><br>' +
+        '• 所有交互加 CSS transition，缓动用 <code>cubic-bezier(.16,1,.3,1)</code><br>' +
+        '• 主色 <code>#0a84ff</code>，成功 <code>#30d158</code>，危险 <code>#ff453a</code><br>' +
+        '• 圆角 12–20px，间距 12–20px' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card"><div class="h2">6. 更新机制</div>' +
+        '<div class="muted" style="line-height:1.9">' +
+        '在 AppStore 中点击「编辑」提交新版本并提升版本号，' +
+        '审核通过后，所有已安装用户会在商店中看到「更新」按钮。' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+/* ==================================================================
+   十三、iframe 桥接（主窗口侧）
+   ================================================================== */
+function initMhjcBridge(){
+  /* 应用内通知由 postMessage 处理，见 renderUserApp */
+}
+
+/* ==================================================================
+   十四、退出登录
+   ================================================================== */
+async function doLogout(){
+  try{ await api('/logout', { method:'POST' }); }catch(e){}
+  State.token = '';
+  State.user = null;
+  localStorage.removeItem('mhjc_token');
+  Object.keys(State.windows).forEach(k => {
+    try{ State.windows[k].el.remove(); }catch(e){}
+  });
+  State.windows = {};
+  $('#desktop').classList.remove('show');
+  setTimeout(() => {
+    $('#auth').classList.add('show');
+    $('#auth').style.opacity = '1';
+    $('#auth').style.transform = 'none';
+    $('#loginForm').classList.remove('hidden');
+    $('#registerForm').classList.add('hidden');
+    $('#lgPass').value = '';
+    toast('已退出登录', 'info');
+  }, 300);
+}
+
+/* ==================================================================
+   启动
+   ================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  runBoot(() => {
+    initAuth();
+    // 让 dock 支持鼠标滚轮横向滚动（窗口窄时）
+    $('#dock').addEventListener('wheel', e => {
+      e.preventDefault();
+      // 不做实际滚动，仅防止页面滚动
+    }, { passive:false });
+  });
+});
+
+window.closeModal = closeModal;
+</script>
+</body>
+</html>
