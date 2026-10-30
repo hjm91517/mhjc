@@ -63,7 +63,8 @@ static void FlashPanelInit(void) {
                 usingBlock:^(NSNotification *n) {
         // 场景可能稍后才就绪，做有限次重试
         __block int tries = 0;
-        void (^retry)(void) = ^{
+        __block void (^retry)(void);
+        retry = ^{
             if (FPActiveScene() || ++tries > 20) { FPBoot(); return; }
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)),
                            dispatch_get_main_queue(), retry);
