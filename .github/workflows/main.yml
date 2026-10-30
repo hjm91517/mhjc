@@ -1,0 +1,99 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build (${{ matrix.scheme }})
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scheme: rootful
+            env: ""
+          - scheme: rootless
+            env: "THEOS_PACKAGE_SCHEME=rootless"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 缓存 Theos
+        id: theos-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/theos
+          key: theos-${{ runner.os }}-${{ hashFiles('Makefile') }}
+
+      - name: 安装 Theos 与工具链
+        if: steps.theos-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          brew install ldid xz dpkg >/dev/null 2>&1 || brew install ldid xz
+          export THEOS=~/theos
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
+          git clone --depth 1 https://github.com/theos/sdks.git /tmp/theos-sdks
+          mkdir -p "$THEOS/sdks"
+          cp -R /tmp/theos-sdks/*.sdk "$THEOS/sdks/" 2>/dev/null || true
+
+      - name: 补齐依赖（缓存命中时）
+        run: |
+          brew list ldid >/dev/null 2>&1 || brew install ldid
+          brew list dpkg >/dev/null 2>&1 || brew install dpkg
+
+      - name: 静态检查
+        run: |
+          echo "::group::源文件"
+          find src -name '*.m' -o -name '*.h' | sort
+          echo "::endgroup::"
+          test -f layout/Library/FlashPanel/panel.html
+
+      - name: 编译打包
+        env:
+          THEOS: ~/theos
+          THEOS_MAKE_PATH: ~/theos/makefiles
+        run: |
+          set -euo pipefail
+          ${{ matrix.env }} make package FINALPACKAGE=1
+          ls -lh packages/
+
+      - name: 生成校验信息
+        run: |
+          echo "## 构建产物 / ${{ matrix.scheme }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          for f in packages/*.deb; do
+            echo "$(basename "$f")  $(du -h "$f" | cut -f1)" >> $GITHUB_STEP_SUMMARY
+            sha256sum "$f" >> $GITHUB_STEP_SUMMARY || shasum -a 256 "$f" >> $GITHUB_STEP_SUMMARY
+          done
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: 上传 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlashPanel-${{ matrix.scheme }}
+          path: |
+            packages/*.deb
+            .theos/obj/**/*.dylib
+          if-no-files-found: warn
+
+  release:
+    name: attach to release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*.deb
+          generate_release_notes: true
