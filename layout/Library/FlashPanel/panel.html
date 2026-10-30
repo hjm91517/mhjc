@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>FlashPanel</title>
+<style>
+:root{
+  --bg:#0e0e12; --bg2:#141419; --card:#17171d; --card2:#1d1d25;
+  --line:#26262f; --line2:#33333f;
+  --red:#ff2d3f; --red2:#ff6b78; --amber:#ff9b3d; --green:#2fdc8a; --blue:#5ad1ff;
+  --t1:#ececf2; --t2:#9a9aab; --t3:#5e5e70;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--t1);
+  font:13px/1.45 -apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  display:flex;flex-direction:column;height:100vh;
+  -webkit-user-select:none;user-select:none;
+}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+/* 头部 */
+.hd{padding:10px 14px 8px;flex:0 0 auto;display:flex;align-items:center;gap:8px}
+.hd .t{font-size:11px;letter-spacing:.18em;color:var(--t3);font-weight:600}
+.hd .live{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t3);letter-spacing:.08em}
+.hd .dot{width:5px;height:5px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:p 1.6s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* 概览条 */
+.hero{padding:0 14px 10px;flex:0 0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+.kpi .k{font-size:9.5px;color:var(--t3);letter-spacing:.06em}
+.kpi .v{font-size:19px;font-weight:600;letter-spacing:-.02em;margin-top:1px}
+.kpi .v small{font-size:10px;color:var(--t3);font-weight:400;margin-left:1px}
+.kpi .d{font-size:9.5px;margin-top:1px}
+.up{color:var(--red2)} .dn{color:var(--green)}
+
+/* 主体 */
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 14px 12px;-webkit-overflow-scrolling:touch}
+.pane{display:none;animation:in .28s ease both}
+.pane.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.card-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.card-h h4{font-size:12px;font-weight:600;letter-spacing:.02em}
+.card-h .s{font-size:10px;color:var(--t3);margin-left:auto}
+
+canvas.spark{display:block;width:100%;height:72px}
+
+/* 列表行 */
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.row:last-child{border:0}
+.row .n{font-size:12.5px;color:var(--t1);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{font-size:10px;color:var(--t3)}
+.badge{font-size:9px;letter-spacing:.06em;padding:2px 6px;border-radius:5px;border:1px solid}
+.badge.c{color:var(--red2);border-color:rgba(255,45,63,.35);background:rgba(255,45,63,.10)}
+.badge.w{color:var(--amber);border-color:rgba(255,155,61,.32);background:rgba(255,155,61,.09)}
+.badge.g{color:var(--green);border-color:rgba(47,220,138,.32);background:rgba(47,220,138,.09)}
+.badge.i{color:var(--blue);border-color:rgba(90,209,255,.3);background:rgba(90,209,255,.08)}
+
+/* 开关 */
+.sw{width:42px;height:25px;border-radius:99px;background:#2a2a34;position:relative;transition:.24s;flex:0 0 auto}
+.sw i{position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.24s cubic-bezier(.4,1.4,.5,1);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.sw.on{background:var(--red)}
+.sw.on i{left:19px}
+
+/* 事件流 */
+.ev{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.ev:last-child{border:0}
+.ev .b{width:5px;height:5px;border-radius:50%;margin-top:6px;flex:0 0 auto}
+.ev .c{flex:1;min-width:0}
+.ev .l1{font-size:12px;display:flex;gap:6px;align-items:baseline}
+.ev .l1 time{margin-left:auto;font-size:9.5px;color:var(--t3)}
+.ev .l2{font-size:10.5px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 设置 */
+.set{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.set:last-child{border:0}
+.set .l{flex:1}
+.set .l b{display:block;font-size:12.5px;font-weight:500}
+.set .l span{font-size:10px;color:var(--t3)}
+input[type=range]{display:block;-webkit-appearance:none;width:100%;height:3px;border-radius:3px;background:#2c2c36;outline:0;margin-top:8px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--red);box-shadow:0 1px 6px rgba(255,45,63,.5)}
+.slide{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.slide:last-child{border:0}
+.slide .t{display:flex;justify-content:space-between;font-size:12.5px}
+.slide .t b{color:var(--red2);font-weight:600;font-size:12px}
+
+/* 底部标签 */
+.tabs{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:#0b0b0f;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{
+  background:none;border:0;color:var(--t3);font-size:10px;letter-spacing:.06em;padding:9px 0 10px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;transition:.18s;
+}
+.tabs button i{width:18px;height:18px;display:block;opacity:.75}
+.tabs button.on{color:var(--red)}
+.tabs button.on i{opacity:1}
+.tabs svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <span class="t">SESSION 04 · DEMO</span>
+  <span class="live"><span class="dot"></span>LIVE</span>
+</div>
+
+<div class="hero">
+  <div class="kpi"><div class="k">FPS</div><div class="v mono" id="kFps">60<small>fps</small></div><div class="d dn" id="dFps">稳定</div></div>
+  <div class="kpi"><div class="k">CPU</div><div class="v mono" id="kCpu">12<small>%</small></div><div class="d up" id="dCpu">+0.0</div></div>
+  <div class="kpi"><div class="k">MEM</div><div class="v mono" id="kMem">0<small>MB</small></div><div class="d dn" id="dMem">—</div></div>
+</div>
+
+<div class="body" id="body">
+
+  <section class="pane on" id="p-overview">
+    <div class="card">
+      <div class="card-h"><h4>帧率 / 负载</h4><span class="s" id="up">up 0s</span></div>
+      <canvas class="spark" id="spark"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h4>规则命中</h4><span class="s">TOP 6</span></div>
+      <div id="rules"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h4>高风险会话</h4><span class="s">风险分 ≥ 80</span></div>
+      <div id="risks"></div>
+    </div>
+  </section>
+
+  <section class="pane" id="p-rules">
+    <div class="card">
+      <div class="card-h"><h4>规则开关</h4><span class="s">改动即时生效</span></div>
+      <div id="switches"></div>
+    </div>
+  </section>
+
+  <section class="pane" id="p-events">
+    <div class="card">
+      <div class="card-h"><h4>实时事件</h4><span class="s" id="evcount">0</span></div>
+      <div id="events"></div>
+    </div>
+  </section>
+
+  <section class="pane" id="p-settings">
+    <div class="card">
+      <div class="card-h"><h4>阈值标定</h4><span class="s">拖动即时同步</span></div>
+      <div class="slide"><div class="t"><span>水平速度</span><b id="v0">6.0 m/s</b></div>
+        <input type="range" min="40" max="120" value="60" data-i="0" data-u=" m/s" data-div="10"></div>
+      <div class="slide"><div class="t"><span>攻击距离</span><b id="v1">4.5 m</b></div>
+        <input type="range" min="25" max="80" value="45" data-i="1" data-u=" m" data-div="10"></div>
+      <div class="slide"><div class="t"><span>CPS 上限</span><b id="v2">16 /s</b></div>
+        <input type="range" min="8" max="26" value="16" data-i="2" data-u=" /s" data-div="1"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h4>面板</h4></div>
+      <div class="set"><div class="l"><b>半透明背景</b><span>降低遮挡</span></div><div class="sw" data-k="dim"><i></i></div></div>
+      <div class="set"><div class="l"><b>触感反馈</b><span>切换时轻震</span></div><div class="sw on" data-k="haptic"><i></i></div></div>
+      <div class="set"><div class="l"><b>折叠为气泡</b><span>保留入口</span></div><button class="badge i" id="btnCollapse" style="font-size:11px;padding:6px 12px">折叠</button></div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="tabs" id="tabs">
+  <button class="on" data-p="overview"><i><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></i>总览</button>
+  <button data-p="rules"><i><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></i>规则</button>
+  <button data-p="events"><i><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg></i>事件</button>
+  <button data-p="settings"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></i>设置</button>
+</nav>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const send = (m) => { try { window.webkit.messageHandlers.fp.postMessage(m); } catch (e) {} };
+const buzz = () => send({ cmd: 'haptic' });
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- 数据缓冲 ---------- */
+function walk(base, amp, n) {
+  let v = base; const a = [];
+  for (let i = 0; i < n; i++) { v += (Math.random() - .5) * amp; v = clamp(v, base - amp * 3, base + amp * 3); a.push(v); }
+  return a;
+}
+const hist = { fps: walk(59, 1.6, 40), cpu: walk(14, 2.2, 40), mem: walk(0, 0, 40) };
+let lastMem = 0;
+
+window.FP = {
+  push(d) {
+    if (typeof d.fps === 'number') { hist.fps.push(d.fps); hist.fps.shift(); }
+    if (typeof d.cpu === 'number') { hist.cpu.push(d.cpu); hist.cpu.shift(); }
+    if (typeof d.mem === 'number') { hist.mem.push(d.mem); hist.mem.shift(); }
+
+    const fps = hist.fps[hist.fps.length - 1];
+    const cpu = hist.cpu[hist.cpu.length - 1];
+    const mem = hist.mem[hist.mem.length - 1];
+
+    $('#kFps').innerHTML = Math.round(fps) + '<small>fps</small>';
+    $('#kCpu').innerHTML = cpu.toFixed(1) + '<small>%</small>';
+    $('#kMem').innerHTML = Math.round(mem) + '<small>MB</small>';
+
+    const df = fps - 60;
+    $('#dFps').textContent = df < -8 ? '掉帧 ' + df.toFixed(0) : '稳定';
+    $('#dFps').className = 'd ' + (df < -8 ? 'up' : 'dn');
+    $('#dCpu').textContent = (cpu > 40 ? '+' : '') + (cpu - 12).toFixed(1);
+    $('#dCpu').className = 'd ' + (cpu > 40 ? 'up' : 'dn');
+    if (lastMem) {
+      const dm = mem - lastMem;
+      $('#dMem').textContent = (dm >= 0 ? '+' : '') + dm.toFixed(1) + 'MB';
+      $('#dMem').className = 'd ' + (dm > 2 ? 'up' : 'dn');
+    }
+    lastMem = mem;
+
+    if (typeof d.uptime === 'number') {
+      const s = Math.floor(d.uptime % 86400);
+      $('#up').textContent = 'up ' + Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    }
+    drawSpark();
+  },
+  event(e) { addEvent(e); },
+  theme(t) { document.documentElement.style.setProperty('--red', t || '#ff2d3f'); }
+};
+
+/* ---------- 折线 ---------- */
+const cv = $('#spark');
+function drawSpark() {
+  const dpr = devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight || 72;
+  if (!w) return;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, w, h);
+
+  c.strokeStyle = 'rgba(255,255,255,.05)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const y = 8 + (h - 16) / 2 * i;
+    c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
+  }
+
+  const line = (arr, min, max, color, fill) => {
+    const n = arr.length;
+    const X = i => i / (n - 1) * w;
+    const Y = v => h - 6 - (clamp(v, min, max) - min) / (max - min) * (h - 14);
+    if (fill) {
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, color + '3d'); g.addColorStop(1, color + '00');
+      c.beginPath(); c.moveTo(0, h);
+      arr.forEach((v, i) => c.lineTo(X(i), Y(v)));
+      c.lineTo(w, h); c.closePath(); c.fillStyle = g; c.fill();
+    }
+    c.beginPath();
+    arr.forEach((v, i) => i ? c.lineTo(X(i), Y(v)) : c.moveTo(X(i), Y(v)));
+    c.strokeStyle = color; c.lineWidth = 1.8; c.lineJoin = 'round'; c.stroke();
+    const lx = X(n - 1), ly = Y(arr[n - 1]);
+    c.beginPath(); c.arc(lx, ly, 2.6, 0, 7); c.fillStyle = '#fff'; c.fill();
+    c.strokeStyle = color; c.lineWidth = 2; c.stroke();
+  };
+
+  line(hist.fps, 30, 70, '#ff2d3f', true);
+  line(hist.cpu, 0, 60, '#ff9b3d', false);
+}
+
+/* ---------- 规则 ---------- */
+const RULES = [
+  ['水平速度超限', '移动', 'c', 1], ['瞬移位移突变', '移动', 'c', 1],
+  ['视角角速度阶跃', '视角', 'c', 1], ['攻击距离超限', '战斗', 'w', 1],
+  ['无后摇连击', '战斗', 'w', 1], ['CPS 尖峰', '战斗', 'w', 0],
+  ['命中盒偏移', '渲染', 'w', 1], ['包时序乱序', '协议', 'i', 0]
+];
+$('#rules').innerHTML = RULES.slice(0, 6).map(r => `
+  <div class="row">
+    <span class="badge ${r[2]}">${r[1]}</span>
+    <span class="n">${r[0]}</span>
+    <span class="m mono">${(Math.random() * 900 + 20).toFixed(0)}</span>
+  </div>`).join('');
+
+$('#switches').innerHTML = RULES.map((r, i) => `
+  <div class="row">
+    <span class="n">${r[0]}</span>
+    <div class="sw ${r[3] ? 'on' : ''}" data-r="${i}"><i></i></div>
+  </div>`).join('');
+
+$$('.sw').forEach(sw => sw.addEventListener('click', () => {
+  sw.classList.toggle('on');
+  const on = sw.classList.contains('on');
+  const hap = document.querySelector('.sw[data-k=haptic]');
+  if (hap && hap.classList.contains('on')) buzz();
+  send({ cmd: 'value', key: sw.dataset.r ? 'rule.' + sw.dataset.r : sw.dataset.k, value: on });
+}));
+
+/* ---------- 风险 ---------- */
+$('#risks').innerHTML = Array.from({ length: 5 }, () => {
+  const id = '#' + Math.random().toString(36).slice(2, 7).toUpperCase();
+  const s = 82 + Math.floor(Math.random() * 17);
+  return `<div class="row"><span class="n mono">${id}</span>
+    <span class="badge c">${s}</span></div>`;
+}).join('');
+
+/* ---------- 事件 ---------- */
+const evBox = $('#events');
+let evN = 0;
+function addEvent(e) {
+  const t = e.t || 'i';
+  const color = { c: '#ff2d3f', w: '#ff9b3d', o: '#2fdc8a', i: '#5ad1ff' }[t] || '#5ad1ff';
+  const d = new Date();
+  const el = document.createElement('div');
+  el.className = 'ev';
+  el.innerHTML = `<span class="b" style="background:${color}"></span>
+    <div class="c"><div class="l1"><b>${e.title || '事件'}</b>
+    <time>${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</time></div>
+    <div class="l2">${e.desc || ''}</div></div>`;
+  evBox.prepend(el);
+  evN++;
+  $('#evcount').textContent = evN + ' 条';
+  while (evBox.children.length > 30) evBox.lastChild.remove();
+}
+
+/* 宿主未推送时用本地演示事件，保证空态不空 */
+const DEMO = [
+  { t: 'c', title: '位移突变', desc: '0.32s 内移动 14.8m' },
+  { t: 'w', title: 'CPS 异常', desc: '峰值 21，持续 4.2s' },
+  { t: 'o', title: '复核完成', desc: '工单 #4429 维持判定' },
+  { t: 'i', title: '规则更新', desc: 'R-0412 阈值 5.8 → 6.0' }
+];
+DEMO.slice(0, 3).forEach(addEvent);
+let demoI = 0;
+setInterval(() => { if (evN < 6) addEvent(DEMO[demoI++ % DEMO.length]); }, 5200);
+
+/* ---------- 标签 ---------- */
+$$('#tabs button').forEach(b => b.addEventListener('click', () => {
+  $$('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.p));
+  $('#body').scrollTop = 0;
+  buzz();
+  if (b.dataset.p === 'overview') drawSpark();
+}));
+
+/* ---------- 滑块 ---------- */
+$$('input[type=range]').forEach(inp => {
+  inp.addEventListener('input', () => {
+    const div = +inp.dataset.div;
+    const v = (inp.value / div).toFixed(div === 1 ? 0 : 1);
+    $('#v' + inp.dataset.i).textContent = v + inp.dataset.u;
+    send({ cmd: 'value', key: 'threshold.' + inp.dataset.i, value: +v });
+  });
+});
+
+/* ---------- 折叠 ---------- */
+$('#btnCollapse').addEventListener('click', () => { buzz(); send({ cmd: 'collapse' }); });
+
+/* ---------- 尺寸自适应 ---------- */
+addEventListener('resize', drawSpark);
+window.addEventListener('load', () => {
+  drawSpark();
+  send({ cmd: 'ready' });
+});
+</script>
+</body>
+</html>

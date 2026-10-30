@@ -1,0 +1,9 @@
+Package: com.example.flashpanel
+Name: FlashPanel
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 可复用的 iOS 悬浮 HUD 框架（纯 UI 层，无任何游戏/授权逻辑）
+Maintainer: example
+Author: example
+Section: Tweaks
+Depends: mobilesubstrate
