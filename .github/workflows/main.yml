@@ -7,6 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.scheme }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: build (${{ matrix.scheme }})
@@ -16,70 +20,90 @@ jobs:
       matrix:
         include:
           - scheme: rootful
-            env: ""
+            pkg_scheme: ""
           - scheme: rootless
-            env: "THEOS_PACKAGE_SCHEME=rootless"
+            pkg_scheme: "rootless"
+
+    env:
+      # 关键：不能用 ~/theos。GitHub 不展开波浪号，make 会去找字面量路径 "~/theos/..." 而失败
+      THEOS_PACKAGE_SCHEME: ${{ matrix.pkg_scheme }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: 解析 THEOS 路径
+        run: echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
 
       - name: 缓存 Theos
         id: theos-cache
         uses: actions/cache@v4
         with:
           path: ~/theos
-          key: theos-${{ runner.os }}-${{ hashFiles('Makefile') }}
+          key: theos-${{ runner.os }}-${{ runner.arch }}-v2
 
-      - name: 安装 Theos 与工具链
+      - name: 安装依赖
+        run: |
+          brew list ldid >/dev/null 2>&1 || brew install ldid
+          brew list xz   >/dev/null 2>&1 || brew install xz
+          brew list dpkg >/dev/null 2>&1 || brew install dpkg
+
+      - name: 安装 Theos
         if: steps.theos-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          brew install ldid xz dpkg >/dev/null 2>&1 || brew install ldid xz
-          export THEOS=~/theos
-          git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
           git clone --depth 1 https://github.com/theos/sdks.git /tmp/theos-sdks
-          mkdir -p "$THEOS/sdks"
-          cp -R /tmp/theos-sdks/*.sdk "$THEOS/sdks/" 2>/dev/null || true
+          mkdir -p "$HOME/theos/sdks"
+          cp -R /tmp/theos-sdks/*.sdk "$HOME/theos/sdks/"
 
-      - name: 补齐依赖（缓存命中时）
+      - name: 环境自检
         run: |
-          brew list ldid >/dev/null 2>&1 || brew install ldid
-          brew list dpkg >/dev/null 2>&1 || brew install dpkg
+          echo "THEOS=$THEOS"
+          test -f "$THEOS/makefiles/common.mk" || { echo "::error::Theos 目录不完整"; exit 1; }
+          echo "sdk=$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "xcode=$(xcodebuild -version | head -1)"
+          ldid -v 2>&1 | head -1
+          dpkg --version 2>&1 | head -1
+          ls "$THEOS/sdks" | head -5
 
-      - name: 静态检查
-        run: |
-          echo "::group::源文件"
-          find src -name '*.m' -o -name '*.h' | sort
-          echo "::endgroup::"
-          test -f layout/Library/FlashPanel/panel.html
+      # 先出 dylib：只依赖 Xcode，失败面最小，保证一定有产物
+      - name: 编译 dylib（clang 直出）
+        run: bash scripts/build-clang.sh
 
-      - name: 编译打包
-        env:
-          THEOS: ~/theos
-          THEOS_MAKE_PATH: ~/theos/makefiles
+      - name: 打包 deb（Theos）
         run: |
           set -euo pipefail
-          ${{ matrix.env }} make package FINALPACKAGE=1
+          make clean >/dev/null 2>&1 || true
+          make package FINALPACKAGE=1 2>&1 | tee /tmp/make.log
           ls -lh packages/
 
-      - name: 生成校验信息
+      - name: 失败时输出日志摘要
+        if: failure()
         run: |
-          echo "## 构建产物 / ${{ matrix.scheme }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          for f in packages/*.deb; do
-            echo "$(basename "$f")  $(du -h "$f" | cut -f1)" >> $GITHUB_STEP_SUMMARY
-            sha256sum "$f" >> $GITHUB_STEP_SUMMARY || shasum -a 256 "$f" >> $GITHUB_STEP_SUMMARY
-          done
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "===== 最后 120 行 make 输出 ====="
+          tail -n 120 /tmp/make.log 2>/dev/null || echo "(无 make 日志，可能更早就失败了)"
+
+      - name: 校验产物
+        run: |
+          {
+            echo "## ${{ matrix.scheme }}"
+            echo '```'
+            for f in build/*.dylib packages/*.deb; do
+              [ -e "$f" ] || continue
+              printf '%-52s %s\n' "$(basename "$f")" "$(du -h "$f" | cut -f1)"
+              shasum -a 256 "$f"
+            done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 上传 artifact
         uses: actions/upload-artifact@v4
         with:
           name: FlashPanel-${{ matrix.scheme }}
           path: |
+            build/*.dylib
             packages/*.deb
-            .theos/obj/**/*.dylib
-          if-no-files-found: warn
+          if-no-files-found: error
 
   release:
     name: attach to release
@@ -95,5 +119,7 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*.deb
+          files: |
+            dist/**/*.deb
+            dist/**/*.dylib
           generate_release_notes: true
